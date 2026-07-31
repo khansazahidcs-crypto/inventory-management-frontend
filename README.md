@@ -49,3 +49,14 @@ src/
 | /dashboard | Main dashboard | Yes |
 | /profile | User profile and password change | Yes |
 | /logout | Logs out and redirects to login | Yes |
+## Features (Week 2)
+- Master data CRUD modules: Categories, Brands, Suppliers, Customers, Products
+- Reusable components: DataTable, FormModal, SearchInput, Pagination, ConfirmDialog
+- Image upload for Brand logo and Product image
+- Generic API service factory (src/api/services.js) shared across all modules
+
+## Features (Week 3)
+- **Purchases** — record a purchase from a supplier with one or more product line items, set status (pending/received/cancelled)
+- **Automatic stock update** — marking a purchase as received automatically increases stock for every line item
+- **Inventory levels** — view current stock for every product, with a low-stock filter
+- **Stock history** — view the full movement log (before/after quantities, type, note) for any product
