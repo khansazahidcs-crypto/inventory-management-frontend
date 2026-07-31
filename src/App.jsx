@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+﻿import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
@@ -10,6 +10,10 @@ import BrandList from "./pages/brands/BrandList";
 import SupplierList from "./pages/suppliers/SupplierList";
 import CustomerList from "./pages/customers/CustomerList";
 import ProductList from "./pages/products/ProductList";
+import PurchaseList from "./pages/purchases/PurchaseList";
+import PurchaseCreate from "./pages/purchases/PurchaseCreate";
+import InventoryList from "./pages/inventory/InventoryList";
+import StockHistory from "./pages/inventory/StockHistory";
 
 function App() {
     return (
@@ -71,6 +75,38 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <ProductList />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/purchases"
+                    element={
+                        <ProtectedRoute>
+                            <PurchaseList />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/purchases/new"
+                    element={
+                        <ProtectedRoute>
+                            <PurchaseCreate />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/inventory"
+                    element={
+                        <ProtectedRoute>
+                            <InventoryList />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/inventory/:id/history"
+                    element={
+                        <ProtectedRoute>
+                            <StockHistory />
                         </ProtectedRoute>
                     }
                 />

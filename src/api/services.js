@@ -58,3 +58,10 @@ export const brandService = createResourceService("brands", { hasFile: true });
 export const supplierService = createResourceService("suppliers");
 export const customerService = createResourceService("customers");
 export const productService = createResourceService("products", { hasFile: true });
+export const purchaseService = createResourceService("purchases");
+
+export const inventoryService = {
+  list: (params = {}) => api.get("/inventory", { params, headers: authHeaders() }),
+  history: (productId, params = {}) =>
+    api.get(`/inventory/${productId}/stock-history`, { params, headers: authHeaders() }),
+};

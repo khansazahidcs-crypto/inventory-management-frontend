@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+﻿import { NavLink } from "react-router-dom";
 
 function Sidebar() {
     const linkClasses = ({ isActive }) =>
@@ -16,6 +16,12 @@ function Sidebar() {
             <nav className="flex flex-col gap-1">
                 <NavLink to="/dashboard" className={linkClasses}>
                     Dashboard
+                </NavLink>
+                <NavLink to="/purchases" className={linkClasses}>
+                    Purchases
+                </NavLink>
+                <NavLink to="/inventory" className={linkClasses}>
+                    Inventory
                 </NavLink>
                 <NavLink to="/profile" className={linkClasses}>
                     Profile
