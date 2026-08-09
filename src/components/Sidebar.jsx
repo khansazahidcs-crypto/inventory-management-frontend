@@ -20,6 +20,9 @@ function Sidebar() {
                 <NavLink to="/purchases" className={linkClasses}>
                     Purchases
                 </NavLink>
+                <NavLink to="/sales" className={linkClasses}>
+                    Sales
+                </NavLink>
                 <NavLink to="/inventory" className={linkClasses}>
                     Inventory
                 </NavLink>

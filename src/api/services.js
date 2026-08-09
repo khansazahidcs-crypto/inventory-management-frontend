@@ -60,6 +60,12 @@ export const customerService = createResourceService("customers");
 export const productService = createResourceService("products", { hasFile: true });
 export const purchaseService = createResourceService("purchases");
 
+export const saleService = {
+  ...createResourceService("sales"),
+  complete: (id) => api.post(`/sales/${id}/complete`, {}, { headers: authHeaders() }),
+  cancel: (id) => api.post(`/sales/${id}/cancel`, {}, { headers: authHeaders() }),
+};
+
 export const inventoryService = {
   list: (params = {}) => api.get("/inventory", { params, headers: authHeaders() }),
   history: (productId, params = {}) =>

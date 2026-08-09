@@ -12,6 +12,9 @@ import CustomerList from "./pages/customers/CustomerList";
 import ProductList from "./pages/products/ProductList";
 import PurchaseList from "./pages/purchases/PurchaseList";
 import PurchaseCreate from "./pages/purchases/PurchaseCreate";
+import SaleList from "./pages/sales/SaleList";
+import SaleCreate from "./pages/sales/SaleCreate";
+import SaleInvoice from "./pages/sales/SaleInvoice";
 import InventoryList from "./pages/inventory/InventoryList";
 import StockHistory from "./pages/inventory/StockHistory";
 
@@ -91,6 +94,30 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <PurchaseCreate />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/sales"
+                    element={
+                        <ProtectedRoute>
+                            <SaleList />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/sales/new"
+                    element={
+                        <ProtectedRoute>
+                            <SaleCreate />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/sales/:id"
+                    element={
+                        <ProtectedRoute>
+                            <SaleInvoice />
                         </ProtectedRoute>
                     }
                 />
