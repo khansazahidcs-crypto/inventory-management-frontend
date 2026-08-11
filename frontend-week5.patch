@@ -1,0 +1,996 @@
+diff --git a/src/App.jsx b/src/App.jsx
+index 2953049..dac469d 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -1,4 +1,4 @@
+-﻿import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
++import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+ import Login from "./pages/Login";
+ import Register from "./pages/Register";
+ import Dashboard from "./pages/Dashboard";
+@@ -17,6 +17,9 @@ import SaleCreate from "./pages/sales/SaleCreate";
+ import SaleInvoice from "./pages/sales/SaleInvoice";
+ import InventoryList from "./pages/inventory/InventoryList";
+ import StockHistory from "./pages/inventory/StockHistory";
++import SalesReport from "./pages/reports/SalesReport";
++import PurchasesReport from "./pages/reports/PurchasesReport";
++import StockReport from "./pages/reports/StockReport";
+ 
+ function App() {
+     return (
+@@ -137,6 +140,30 @@ function App() {
+                         </ProtectedRoute>
+                     }
+                 />
++                <Route
++                    path="/reports/sales"
++                    element={
++                        <ProtectedRoute>
++                            <SalesReport />
++                        </ProtectedRoute>
++                    }
++                />
++                <Route
++                    path="/reports/purchases"
++                    element={
++                        <ProtectedRoute>
++                            <PurchasesReport />
++                        </ProtectedRoute>
++                    }
++                />
++                <Route
++                    path="/reports/stock"
++                    element={
++                        <ProtectedRoute>
++                            <StockReport />
++                        </ProtectedRoute>
++                    }
++                />
+                 <Route
+                     path="/logout"
+                     element={
+diff --git a/src/api/services.js b/src/api/services.js
+index 142f983..b031019 100644
+--- a/src/api/services.js
++++ b/src/api/services.js
+@@ -70,4 +70,33 @@ export const inventoryService = {
+   list: (params = {}) => api.get("/inventory", { params, headers: authHeaders() }),
+   history: (productId, params = {}) =>
+     api.get(`/inventory/${productId}/stock-history`, { params, headers: authHeaders() }),
++};
++
++export const dashboardService = {
++  summary: () => api.get("/dashboard/summary", { headers: authHeaders() }),
++};
++
++export const reportService = {
++  sales: (params = {}) => api.get("/reports/sales", { params, headers: authHeaders() }),
++  purchases: (params = {}) => api.get("/reports/purchases", { params, headers: authHeaders() }),
++  stock: (params = {}) => api.get("/reports/stock", { params, headers: authHeaders() }),
++
++  // Exports return a raw CSV file, so they need a manual authenticated fetch
++  // (a plain <a href> can't attach the Authorization header) that turns the
++  // response into a blob and triggers a browser download.
++  downloadCsv: async (reportType, params = {}, filename) => {
++    const response = await api.get(`/reports/${reportType}/export`, {
++      params,
++      headers: authHeaders(),
++      responseType: "blob",
++    });
++    const url = window.URL.createObjectURL(new Blob([response.data]));
++    const link = document.createElement("a");
++    link.href = url;
++    link.setAttribute("download", filename || `${reportType}-report.csv`);
++    document.body.appendChild(link);
++    link.click();
++    link.remove();
++    window.URL.revokeObjectURL(url);
++  },
+ };
+\ No newline at end of file
+diff --git a/src/components/Sidebar.jsx b/src/components/Sidebar.jsx
+index f05245a..88725a0 100644
+--- a/src/components/Sidebar.jsx
++++ b/src/components/Sidebar.jsx
+@@ -1,4 +1,4 @@
+-﻿import { NavLink } from "react-router-dom";
++import { NavLink } from "react-router-dom";
+ 
+ function Sidebar() {
+     const linkClasses = ({ isActive }) =>
+@@ -26,6 +26,18 @@ function Sidebar() {
+                 <NavLink to="/inventory" className={linkClasses}>
+                     Inventory
+                 </NavLink>
++                <h3 className="text-xs uppercase text-slate-500 font-semibold mt-4 mb-1 px-2">
++                    Reports
++                </h3>
++                <NavLink to="/reports/sales" className={linkClasses}>
++                    Sales Report
++                </NavLink>
++                <NavLink to="/reports/purchases" className={linkClasses}>
++                    Purchases Report
++                </NavLink>
++                <NavLink to="/reports/stock" className={linkClasses}>
++                    Stock Report
++                </NavLink>
+                 <NavLink to="/profile" className={linkClasses}>
+                     Profile
+                 </NavLink>
+diff --git a/src/pages/Dashboard.jsx b/src/pages/Dashboard.jsx
+index cde31e3..57a395f 100644
+--- a/src/pages/Dashboard.jsx
++++ b/src/pages/Dashboard.jsx
+@@ -1,12 +1,232 @@
++import { useEffect, useState } from "react";
++import { Link } from "react-router-dom";
+ import Layout from "../components/Layout";
++import { dashboardService } from "../api/services";
+ 
+-function Dashboard() {
+-    return (
+-        <Layout>
+-            <h1 className="text-2xl font-bold mb-2">Dashboard</h1>
+-            <p className="text-slate-400">Welcome to your dashboard</p>
+-        </Layout>
+-    );
++function formatCurrency(value) {
++  return Number(value || 0).toLocaleString(undefined, {
++    minimumFractionDigits: 2,
++    maximumFractionDigits: 2,
++  });
+ }
+ 
+-export default Dashboard;
+\ No newline at end of file
++function StatCard({ label, value, sub, accent = "text-white" }) {
++  return (
++    <div className="bg-slate-900 border border-slate-800 rounded-lg p-5">
++      <p className="text-slate-400 text-sm mb-1">{label}</p>
++      <p className={`text-2xl font-bold ${accent}`}>{value}</p>
++      {sub && <p className="text-slate-500 text-xs mt-1">{sub}</p>}
++    </div>
++  );
++}
++
++function SalesTrendChart({ trend }) {
++  const max = Math.max(1, ...trend.map((d) => d.total));
++
++  return (
++    <div className="bg-slate-900 border border-slate-800 rounded-lg p-5">
++      <h2 className="text-lg font-semibold mb-4">Sales — Last 7 Days</h2>
++      <div className="flex items-end gap-3 h-40">
++        {trend.map((day) => {
++          const heightPct = Math.max(4, Math.round((day.total / max) * 100));
++          const label = new Date(day.date).toLocaleDateString(undefined, {
++            weekday: "short",
++          });
++          return (
++            <div key={day.date} className="flex-1 flex flex-col items-center gap-2">
++              <div className="w-full flex items-end h-32">
++                <div
++                  className="w-full bg-blue-600 rounded-t-md transition-all"
++                  style={{ height: `${heightPct}%` }}
++                  title={`${day.date}: ${formatCurrency(day.total)}`}
++                />
++              </div>
++              <span className="text-slate-500 text-xs">{label}</span>
++            </div>
++          );
++        })}
++      </div>
++    </div>
++  );
++}
++
++export default function Dashboard() {
++  const [data, setData] = useState(null);
++  const [loading, setLoading] = useState(true);
++  const [error, setError] = useState("");
++
++  useEffect(() => {
++    dashboardService
++      .summary()
++      .then((res) => {
++        setData(res.data.data);
++        setLoading(false);
++      })
++      .catch((err) => {
++        console.error("Error fetching dashboard summary:", err);
++        setError("Failed to load dashboard data.");
++        setLoading(false);
++      });
++  }, []);
++
++  return (
++    <Layout>
++      <h1 className="text-2xl font-bold mb-2">Dashboard</h1>
++      <p className="text-slate-400 mb-6">Welcome to your dashboard</p>
++
++      {loading && <p className="text-slate-400">Loading dashboard...</p>}
++      {error && <p className="text-red-400">{error}</p>}
++
++      {data && (
++        <div className="flex flex-col gap-6">
++          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
++            <StatCard label="Total Products" value={data.total_products} />
++            <StatCard label="Total Customers" value={data.total_customers} />
++            <StatCard label="Total Suppliers" value={data.total_suppliers} />
++            <StatCard
++              label="Low Stock Items"
++              value={data.low_stock_count}
++              accent={data.low_stock_count > 0 ? "text-amber-400" : "text-white"}
++            />
++          </div>
++
++          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
++            <StatCard
++              label="Sales Revenue (All Time)"
++              value={formatCurrency(data.sales_revenue_total)}
++              accent="text-green-400"
++            />
++            <StatCard
++              label="Purchases Cost (All Time)"
++              value={formatCurrency(data.purchases_cost_total)}
++              accent="text-blue-400"
++            />
++            <StatCard
++              label="Pending Sales"
++              value={data.pending_sales_count}
++              sub="awaiting completion"
++            />
++            <StatCard
++              label="Pending Purchases"
++              value={data.pending_purchases_count}
++              sub="awaiting receipt"
++            />
++          </div>
++
++          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
++            <div className="md:col-span-1 bg-slate-900 border border-slate-800 rounded-lg p-5">
++              <p className="text-slate-400 text-sm mb-1">Sales This Month</p>
++              <p className="text-2xl font-bold text-white">
++                {formatCurrency(data.sales_this_month)}
++              </p>
++              {data.sales_month_over_month_change !== null && (
++                <p
++                  className={`text-xs mt-1 ${
++                    data.sales_month_over_month_change >= 0
++                      ? "text-green-400"
++                      : "text-red-400"
++                  }`}
++                >
++                  {data.sales_month_over_month_change >= 0 ? "▲" : "▼"}{" "}
++                  {Math.abs(data.sales_month_over_month_change)}% vs last month (
++                  {formatCurrency(data.sales_last_month)})
++                </p>
++              )}
++            </div>
++            <div className="md:col-span-2">
++              <SalesTrendChart trend={data.sales_trend_last_7_days} />
++            </div>
++          </div>
++
++          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
++            <div className="bg-slate-900 border border-slate-800 rounded-lg p-5">
++              <div className="flex justify-between items-center mb-3">
++                <h2 className="text-lg font-semibold">Recent Sales</h2>
++                <Link to="/reports/sales" className="text-blue-400 text-sm hover:underline">
++                  View report →
++                </Link>
++              </div>
++              {data.recent_sales.length === 0 ? (
++                <p className="text-slate-500 text-sm">No sales yet.</p>
++              ) : (
++                <table className="w-full text-sm">
++                  <tbody>
++                    {data.recent_sales.map((sale) => (
++                      <tr key={sale.id} className="border-t border-slate-800">
++                        <td className="py-2 text-slate-300">{sale.invoice_no}</td>
++                        <td className="py-2 text-slate-400">
++                          {sale.customer_name || sale.customer?.name || "Walk-in"}
++                        </td>
++                        <td className="py-2 text-slate-500">{sale.sale_date}</td>
++                        <td className="py-2 text-right text-white">
++                          {formatCurrency(sale.total_amount)}
++                        </td>
++                      </tr>
++                    ))}
++                  </tbody>
++                </table>
++              )}
++            </div>
++
++            <div className="bg-slate-900 border border-slate-800 rounded-lg p-5">
++              <div className="flex justify-between items-center mb-3">
++                <h2 className="text-lg font-semibold">Recent Purchases</h2>
++                <Link to="/reports/purchases" className="text-blue-400 text-sm hover:underline">
++                  View report →
++                </Link>
++              </div>
++              {data.recent_purchases.length === 0 ? (
++                <p className="text-slate-500 text-sm">No purchases yet.</p>
++              ) : (
++                <table className="w-full text-sm">
++                  <tbody>
++                    {data.recent_purchases.map((purchase) => (
++                      <tr key={purchase.id} className="border-t border-slate-800">
++                        <td className="py-2 text-slate-300">{purchase.invoice_no}</td>
++                        <td className="py-2 text-slate-400">
++                          {purchase.supplier_name || purchase.supplier?.name || "-"}
++                        </td>
++                        <td className="py-2 text-slate-500">{purchase.purchase_date}</td>
++                        <td className="py-2 text-right text-white">
++                          {formatCurrency(purchase.total_amount)}
++                        </td>
++                      </tr>
++                    ))}
++                  </tbody>
++                </table>
++              )}
++            </div>
++          </div>
++
++          <div className="bg-slate-900 border border-slate-800 rounded-lg p-5">
++            <h2 className="text-lg font-semibold mb-3">Top Selling Products</h2>
++            {data.top_selling_products.length === 0 ? (
++              <p className="text-slate-500 text-sm">No completed sales yet.</p>
++            ) : (
++              <table className="w-full text-sm">
++                <thead>
++                  <tr className="text-slate-500 text-left">
++                    <th className="pb-2 font-medium">Product</th>
++                    <th className="pb-2 font-medium text-right">Qty Sold</th>
++                    <th className="pb-2 font-medium text-right">Revenue</th>
++                  </tr>
++                </thead>
++                <tbody>
++                  {data.top_selling_products.map((p) => (
++                    <tr key={p.product_id} className="border-t border-slate-800">
++                      <td className="py-2 text-slate-200">{p.product_name}</td>
++                      <td className="py-2 text-right text-slate-300">{p.quantity_sold}</td>
++                      <td className="py-2 text-right text-white">
++                        {formatCurrency(p.revenue)}
++                      </td>
++                    </tr>
++                  ))}
++                </tbody>
++              </table>
++            )}
++          </div>
++        </div>
++      )}
++    </Layout>
++  );
++}
+diff --git a/src/pages/inventory/InventoryList.jsx b/src/pages/inventory/InventoryList.jsx
+index febdc8c..f1b253f 100644
+--- a/src/pages/inventory/InventoryList.jsx
++++ b/src/pages/inventory/InventoryList.jsx
+@@ -1,4 +1,4 @@
+-﻿import { useEffect, useState, useCallback } from "react";
++import { useEffect, useState, useCallback } from "react";
+ import { Link } from "react-router-dom";
+ import { inventoryService } from "../../api/services";
+ 
+diff --git a/src/pages/inventory/StockHistory.jsx b/src/pages/inventory/StockHistory.jsx
+index 00dab41..ed6b75e 100644
+--- a/src/pages/inventory/StockHistory.jsx
++++ b/src/pages/inventory/StockHistory.jsx
+@@ -1,4 +1,4 @@
+-﻿import { useEffect, useState, useCallback } from "react";
++import { useEffect, useState, useCallback } from "react";
+ import { useParams, Link } from "react-router-dom";
+ import { inventoryService } from "../../api/services";
+ 
+diff --git a/src/pages/purchases/PurchaseCreate.jsx b/src/pages/purchases/PurchaseCreate.jsx
+index c8eeb76..e5367e2 100644
+--- a/src/pages/purchases/PurchaseCreate.jsx
++++ b/src/pages/purchases/PurchaseCreate.jsx
+@@ -1,4 +1,4 @@
+-﻿import React, { useState, useEffect } from "react";
++import React, { useState, useEffect } from "react";
+ import { purchaseService, supplierService, productService } from "../../api/services";
+ import { useNavigate } from "react-router-dom";
+ 
+diff --git a/src/pages/purchases/PurchaseList.jsx b/src/pages/purchases/PurchaseList.jsx
+index 8777194..c7e4eaa 100644
+--- a/src/pages/purchases/PurchaseList.jsx
++++ b/src/pages/purchases/PurchaseList.jsx
+@@ -1,4 +1,4 @@
+-﻿import React, { useEffect, useState } from "react";
++import React, { useEffect, useState } from "react";
+ import { purchaseService } from "../../api/services";
+ import { Link } from "react-router-dom";
+ 
+diff --git a/src/pages/reports/PurchasesReport.jsx b/src/pages/reports/PurchasesReport.jsx
+new file mode 100644
+index 0000000..81c7849
+--- /dev/null
++++ b/src/pages/reports/PurchasesReport.jsx
+@@ -0,0 +1,202 @@
++import { useEffect, useState } from "react";
++import { Link } from "react-router-dom";
++import { reportService } from "../../api/services";
++
++const formatCurrency = (value) =>
++  Number(value || 0).toLocaleString(undefined, {
++    minimumFractionDigits: 2,
++    maximumFractionDigits: 2,
++  });
++
++export default function PurchasesReport() {
++  const [dateFrom, setDateFrom] = useState("");
++  const [dateTo, setDateTo] = useState("");
++  const [rows, setRows] = useState([]);
++  const [summary, setSummary] = useState(null);
++  const [loading, setLoading] = useState(true);
++  const [error, setError] = useState("");
++  const [reloadToken, setReloadToken] = useState(0);
++  const [exporting, setExporting] = useState(false);
++
++  useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect
++    setLoading(true);
++    reportService
++      .purchases({ date_from: dateFrom || undefined, date_to: dateTo || undefined })
++      .then((res) => {
++        setRows(res.data.data);
++        setSummary(res.data.summary);
++        setLoading(false);
++      })
++      .catch((err) => {
++        console.error("Error fetching purchases report:", err);
++        setError("Failed to load the purchases report.");
++        setLoading(false);
++      });
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [reloadToken]);
++
++  const applyFilters = (e) => {
++    e.preventDefault();
++    setReloadToken((t) => t + 1);
++  };
++
++  const handleExportCsv = async () => {
++    setExporting(true);
++    try {
++      await reportService.downloadCsv(
++        "purchases",
++        { date_from: dateFrom || undefined, date_to: dateTo || undefined },
++        "purchases-report.csv"
++      );
++    } catch (err) {
++      console.error("Error exporting CSV:", err);
++      alert("Failed to export CSV.");
++    } finally {
++      setExporting(false);
++    }
++  };
++
++  return (
++    <div className="p-6 max-w-5xl mx-auto">
++      <style>{`
++        @media print {
++          .no-print { display: none !important; }
++          body { background: white !important; }
++        }
++      `}</style>
++
++      <div className="no-print flex justify-between items-center mb-4">
++        <Link to="/dashboard" className="text-blue-600 hover:underline text-sm">
++          &larr; Back to Dashboard
++        </Link>
++        <div className="space-x-2">
++          <button
++            onClick={handleExportCsv}
++            disabled={exporting}
++            className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800 disabled:opacity-50"
++          >
++            {exporting ? "Exporting..." : "Export CSV"}
++          </button>
++          <button
++            onClick={() => window.print()}
++            className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
++          >
++            Print / Save as PDF
++          </button>
++        </div>
++      </div>
++
++      <div className="bg-white shadow rounded-lg p-8">
++        <h1 className="text-2xl font-bold mb-1">Purchases Report</h1>
++        <p className="text-sm text-gray-500 mb-6">
++          {dateFrom || dateTo
++            ? `${dateFrom || "start"} to ${dateTo || "today"}`
++            : "All received purchases"}
++        </p>
++
++        <form onSubmit={applyFilters} className="no-print flex flex-wrap gap-3 items-end mb-6">
++          <div>
++            <label className="block text-xs font-medium text-gray-600">From</label>
++            <input
++              type="date"
++              value={dateFrom}
++              onChange={(e) => setDateFrom(e.target.value)}
++              className="border p-2 rounded"
++            />
++          </div>
++          <div>
++            <label className="block text-xs font-medium text-gray-600">To</label>
++            <input
++              type="date"
++              value={dateTo}
++              onChange={(e) => setDateTo(e.target.value)}
++              className="border p-2 rounded"
++            />
++          </div>
++          <button
++            type="submit"
++            className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800"
++          >
++            Apply Filter
++          </button>
++          {(dateFrom || dateTo) && (
++            <button
++              type="button"
++              onClick={() => {
++                setDateFrom("");
++                setDateTo("");
++                setReloadToken((t) => t + 1);
++              }}
++              className="text-sm text-gray-500 hover:underline"
++            >
++              Clear
++            </button>
++          )}
++        </form>
++
++        {error && <div className="text-red-600 mb-4">{error}</div>}
++
++        {loading ? (
++          <p className="text-gray-500">Loading report...</p>
++        ) : (
++          <>
++            {summary && (
++              <div className="grid grid-cols-3 gap-4 mb-6">
++                <div className="border rounded-lg p-4">
++                  <p className="text-xs text-gray-500">Purchase Orders</p>
++                  <p className="text-xl font-bold">{summary.count}</p>
++                </div>
++                <div className="border rounded-lg p-4">
++                  <p className="text-xs text-gray-500">Total Cost</p>
++                  <p className="text-xl font-bold text-blue-700">
++                    {formatCurrency(summary.total_cost)}
++                  </p>
++                </div>
++                <div className="border rounded-lg p-4">
++                  <p className="text-xs text-gray-500">Average Order Value</p>
++                  <p className="text-xl font-bold">
++                    {formatCurrency(summary.average_order_value)}
++                  </p>
++                </div>
++              </div>
++            )}
++
++            <table className="w-full border-collapse">
++              <thead>
++                <tr className="border-b-2 border-gray-800 text-left text-sm">
++                  <th className="py-2">Invoice No.</th>
++                  <th className="py-2">Supplier</th>
++                  <th className="py-2">Date</th>
++                  <th className="py-2 text-right">Total</th>
++                </tr>
++              </thead>
++              <tbody>
++                {rows.length > 0 ? (
++                  rows.map((purchase) => (
++                    <tr key={purchase.id} className="border-b border-gray-200 text-sm">
++                      <td className="py-2">{purchase.invoice_no}</td>
++                      <td className="py-2">
++                        {purchase.supplier_name || purchase.supplier?.name || "-"}
++                      </td>
++                      <td className="py-2">{purchase.purchase_date}</td>
++                      <td className="py-2 text-right">
++                        {formatCurrency(purchase.total_amount)}
++                      </td>
++                    </tr>
++                  ))
++                ) : (
++                  <tr>
++                    <td colSpan="4" className="text-center py-6 text-gray-500">
++                      No received purchases in this range.
++                    </td>
++                  </tr>
++                )}
++              </tbody>
++            </table>
++          </>
++        )}
++      </div>
++    </div>
++  );
++}
+diff --git a/src/pages/reports/SalesReport.jsx b/src/pages/reports/SalesReport.jsx
+new file mode 100644
+index 0000000..837b9d2
+--- /dev/null
++++ b/src/pages/reports/SalesReport.jsx
+@@ -0,0 +1,200 @@
++import { useEffect, useState } from "react";
++import { Link } from "react-router-dom";
++import { reportService } from "../../api/services";
++
++const formatCurrency = (value) =>
++  Number(value || 0).toLocaleString(undefined, {
++    minimumFractionDigits: 2,
++    maximumFractionDigits: 2,
++  });
++
++export default function SalesReport() {
++  const [dateFrom, setDateFrom] = useState("");
++  const [dateTo, setDateTo] = useState("");
++  const [rows, setRows] = useState([]);
++  const [summary, setSummary] = useState(null);
++  const [loading, setLoading] = useState(true);
++  const [error, setError] = useState("");
++  const [reloadToken, setReloadToken] = useState(0);
++  const [exporting, setExporting] = useState(false);
++
++  useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect
++    setLoading(true);
++    reportService
++      .sales({ date_from: dateFrom || undefined, date_to: dateTo || undefined })
++      .then((res) => {
++        setRows(res.data.data);
++        setSummary(res.data.summary);
++        setLoading(false);
++      })
++      .catch((err) => {
++        console.error("Error fetching sales report:", err);
++        setError("Failed to load the sales report.");
++        setLoading(false);
++      });
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [reloadToken]);
++
++  const applyFilters = (e) => {
++    e.preventDefault();
++    setReloadToken((t) => t + 1);
++  };
++
++  const handleExportCsv = async () => {
++    setExporting(true);
++    try {
++      await reportService.downloadCsv(
++        "sales",
++        { date_from: dateFrom || undefined, date_to: dateTo || undefined },
++        "sales-report.csv"
++      );
++    } catch (err) {
++      console.error("Error exporting CSV:", err);
++      alert("Failed to export CSV.");
++    } finally {
++      setExporting(false);
++    }
++  };
++
++  return (
++    <div className="p-6 max-w-5xl mx-auto">
++      <style>{`
++        @media print {
++          .no-print { display: none !important; }
++          body { background: white !important; }
++        }
++      `}</style>
++
++      <div className="no-print flex justify-between items-center mb-4">
++        <Link to="/dashboard" className="text-blue-600 hover:underline text-sm">
++          &larr; Back to Dashboard
++        </Link>
++        <div className="space-x-2">
++          <button
++            onClick={handleExportCsv}
++            disabled={exporting}
++            className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800 disabled:opacity-50"
++          >
++            {exporting ? "Exporting..." : "Export CSV"}
++          </button>
++          <button
++            onClick={() => window.print()}
++            className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
++          >
++            Print / Save as PDF
++          </button>
++        </div>
++      </div>
++
++      <div className="bg-white shadow rounded-lg p-8">
++        <h1 className="text-2xl font-bold mb-1">Sales Report</h1>
++        <p className="text-sm text-gray-500 mb-6">
++          {dateFrom || dateTo
++            ? `${dateFrom || "start"} to ${dateTo || "today"}`
++            : "All completed sales"}
++        </p>
++
++        <form onSubmit={applyFilters} className="no-print flex flex-wrap gap-3 items-end mb-6">
++          <div>
++            <label className="block text-xs font-medium text-gray-600">From</label>
++            <input
++              type="date"
++              value={dateFrom}
++              onChange={(e) => setDateFrom(e.target.value)}
++              className="border p-2 rounded"
++            />
++          </div>
++          <div>
++            <label className="block text-xs font-medium text-gray-600">To</label>
++            <input
++              type="date"
++              value={dateTo}
++              onChange={(e) => setDateTo(e.target.value)}
++              className="border p-2 rounded"
++            />
++          </div>
++          <button
++            type="submit"
++            className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800"
++          >
++            Apply Filter
++          </button>
++          {(dateFrom || dateTo) && (
++            <button
++              type="button"
++              onClick={() => {
++                setDateFrom("");
++                setDateTo("");
++                setReloadToken((t) => t + 1);
++              }}
++              className="text-sm text-gray-500 hover:underline"
++            >
++              Clear
++            </button>
++          )}
++        </form>
++
++        {error && <div className="text-red-600 mb-4">{error}</div>}
++
++        {loading ? (
++          <p className="text-gray-500">Loading report...</p>
++        ) : (
++          <>
++            {summary && (
++              <div className="grid grid-cols-3 gap-4 mb-6">
++                <div className="border rounded-lg p-4">
++                  <p className="text-xs text-gray-500">Invoices</p>
++                  <p className="text-xl font-bold">{summary.count}</p>
++                </div>
++                <div className="border rounded-lg p-4">
++                  <p className="text-xs text-gray-500">Total Revenue</p>
++                  <p className="text-xl font-bold text-green-700">
++                    {formatCurrency(summary.total_revenue)}
++                  </p>
++                </div>
++                <div className="border rounded-lg p-4">
++                  <p className="text-xs text-gray-500">Average Order Value</p>
++                  <p className="text-xl font-bold">
++                    {formatCurrency(summary.average_order_value)}
++                  </p>
++                </div>
++              </div>
++            )}
++
++            <table className="w-full border-collapse">
++              <thead>
++                <tr className="border-b-2 border-gray-800 text-left text-sm">
++                  <th className="py-2">Invoice No.</th>
++                  <th className="py-2">Customer</th>
++                  <th className="py-2">Date</th>
++                  <th className="py-2 text-right">Total</th>
++                </tr>
++              </thead>
++              <tbody>
++                {rows.length > 0 ? (
++                  rows.map((sale) => (
++                    <tr key={sale.id} className="border-b border-gray-200 text-sm">
++                      <td className="py-2">{sale.invoice_no}</td>
++                      <td className="py-2">
++                        {sale.customer_name || sale.customer?.name || "Walk-in Customer"}
++                      </td>
++                      <td className="py-2">{sale.sale_date}</td>
++                      <td className="py-2 text-right">{formatCurrency(sale.total_amount)}</td>
++                    </tr>
++                  ))
++                ) : (
++                  <tr>
++                    <td colSpan="4" className="text-center py-6 text-gray-500">
++                      No completed sales in this range.
++                    </td>
++                  </tr>
++                )}
++              </tbody>
++            </table>
++          </>
++        )}
++      </div>
++    </div>
++  );
++}
+diff --git a/src/pages/reports/StockReport.jsx b/src/pages/reports/StockReport.jsx
+new file mode 100644
+index 0000000..53f587f
+--- /dev/null
++++ b/src/pages/reports/StockReport.jsx
+@@ -0,0 +1,171 @@
++import { useEffect, useState } from "react";
++import { Link } from "react-router-dom";
++import { reportService } from "../../api/services";
++
++const formatCurrency = (value) =>
++  Number(value || 0).toLocaleString(undefined, {
++    minimumFractionDigits: 2,
++    maximumFractionDigits: 2,
++  });
++
++export default function StockReport() {
++  const [lowStockOnly, setLowStockOnly] = useState(false);
++  const [rows, setRows] = useState([]);
++  const [summary, setSummary] = useState(null);
++  const [loading, setLoading] = useState(true);
++  const [error, setError] = useState("");
++  const [exporting, setExporting] = useState(false);
++
++  useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect
++    setLoading(true);
++    reportService
++      .stock({ low_stock: lowStockOnly ? 1 : undefined })
++      .then((res) => {
++        setRows(res.data.data);
++        setSummary(res.data.summary);
++        setLoading(false);
++      })
++      .catch((err) => {
++        console.error("Error fetching stock report:", err);
++        setError("Failed to load the stock report.");
++        setLoading(false);
++      });
++  }, [lowStockOnly]);
++
++  const handleExportCsv = async () => {
++    setExporting(true);
++    try {
++      await reportService.downloadCsv(
++        "stock",
++        { low_stock: lowStockOnly ? 1 : undefined },
++        "stock-report.csv"
++      );
++    } catch (err) {
++      console.error("Error exporting CSV:", err);
++      alert("Failed to export CSV.");
++    } finally {
++      setExporting(false);
++    }
++  };
++
++  return (
++    <div className="p-6 max-w-5xl mx-auto">
++      <style>{`
++        @media print {
++          .no-print { display: none !important; }
++          body { background: white !important; }
++        }
++      `}</style>
++
++      <div className="no-print flex justify-between items-center mb-4">
++        <Link to="/dashboard" className="text-blue-600 hover:underline text-sm">
++          &larr; Back to Dashboard
++        </Link>
++        <div className="space-x-2">
++          <button
++            onClick={handleExportCsv}
++            disabled={exporting}
++            className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800 disabled:opacity-50"
++          >
++            {exporting ? "Exporting..." : "Export CSV"}
++          </button>
++          <button
++            onClick={() => window.print()}
++            className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
++          >
++            Print / Save as PDF
++          </button>
++        </div>
++      </div>
++
++      <div className="bg-white shadow rounded-lg p-8">
++        <h1 className="text-2xl font-bold mb-1">Stock Report</h1>
++        <p className="text-sm text-gray-500 mb-6">Current stock levels and valuation</p>
++
++        <label className="no-print flex items-center gap-2 mb-6 text-sm">
++          <input
++            type="checkbox"
++            checked={lowStockOnly}
++            onChange={(e) => setLowStockOnly(e.target.checked)}
++          />
++          Show low-stock items only
++        </label>
++
++        {error && <div className="text-red-600 mb-4">{error}</div>}
++
++        {loading ? (
++          <p className="text-gray-500">Loading report...</p>
++        ) : (
++          <>
++            {summary && (
++              <div className="grid grid-cols-3 gap-4 mb-6">
++                <div className="border rounded-lg p-4">
++                  <p className="text-xs text-gray-500">Products</p>
++                  <p className="text-xl font-bold">{summary.total_products}</p>
++                </div>
++                <div className="border rounded-lg p-4">
++                  <p className="text-xs text-gray-500">Total Stock Value</p>
++                  <p className="text-xl font-bold text-blue-700">
++                    {formatCurrency(summary.total_stock_value)}
++                  </p>
++                </div>
++                <div className="border rounded-lg p-4">
++                  <p className="text-xs text-gray-500">Low Stock Items</p>
++                  <p className="text-xl font-bold text-amber-600">
++                    {summary.low_stock_count}
++                  </p>
++                </div>
++              </div>
++            )}
++
++            <table className="w-full border-collapse">
++              <thead>
++                <tr className="border-b-2 border-gray-800 text-left text-sm">
++                  <th className="py-2">SKU</th>
++                  <th className="py-2">Product</th>
++                  <th className="py-2">Category</th>
++                  <th className="py-2 text-right">Stock Qty</th>
++                  <th className="py-2 text-right">Reorder Level</th>
++                  <th className="py-2 text-right">Stock Value</th>
++                  <th className="py-2">Status</th>
++                </tr>
++              </thead>
++              <tbody>
++                {rows.length > 0 ? (
++                  rows.map((p) => (
++                    <tr key={p.id} className="border-b border-gray-200 text-sm">
++                      <td className="py-2">{p.sku}</td>
++                      <td className="py-2">{p.name}</td>
++                      <td className="py-2">{p.category_name || "-"}</td>
++                      <td className="py-2 text-right">{p.stock_quantity}</td>
++                      <td className="py-2 text-right">{p.reorder_level}</td>
++                      <td className="py-2 text-right">{formatCurrency(p.stock_value)}</td>
++                      <td className="py-2">
++                        {p.is_low_stock ? (
++                          <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-semibold">
++                            Low Stock
++                          </span>
++                        ) : (
++                          <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">
++                            OK
++                          </span>
++                        )}
++                      </td>
++                    </tr>
++                  ))
++                ) : (
++                  <tr>
++                    <td colSpan="7" className="text-center py-6 text-gray-500">
++                      No products found.
++                    </td>
++                  </tr>
++                )}
++              </tbody>
++            </table>
++          </>
++        )}
++      </div>
++    </div>
++  );
++}

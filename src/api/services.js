@@ -71,3 +71,32 @@ export const inventoryService = {
   history: (productId, params = {}) =>
     api.get(`/inventory/${productId}/stock-history`, { params, headers: authHeaders() }),
 };
+
+export const dashboardService = {
+  summary: () => api.get("/dashboard/summary", { headers: authHeaders() }),
+};
+
+export const reportService = {
+  sales: (params = {}) => api.get("/reports/sales", { params, headers: authHeaders() }),
+  purchases: (params = {}) => api.get("/reports/purchases", { params, headers: authHeaders() }),
+  stock: (params = {}) => api.get("/reports/stock", { params, headers: authHeaders() }),
+
+  // Exports return a raw CSV file, so they need a manual authenticated fetch
+  // (a plain <a href> can't attach the Authorization header) that turns the
+  // response into a blob and triggers a browser download.
+  downloadCsv: async (reportType, params = {}, filename) => {
+    const response = await api.get(`/reports/${reportType}/export`, {
+      params,
+      headers: authHeaders(),
+      responseType: "blob",
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", filename || `${reportType}-report.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
+};

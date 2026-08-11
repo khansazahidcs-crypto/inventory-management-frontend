@@ -1,4 +1,4 @@
-﻿import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
@@ -17,6 +17,9 @@ import SaleCreate from "./pages/sales/SaleCreate";
 import SaleInvoice from "./pages/sales/SaleInvoice";
 import InventoryList from "./pages/inventory/InventoryList";
 import StockHistory from "./pages/inventory/StockHistory";
+import SalesReport from "./pages/reports/SalesReport";
+import PurchasesReport from "./pages/reports/PurchasesReport";
+import StockReport from "./pages/reports/StockReport";
 
 function App() {
     return (
@@ -134,6 +137,30 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <StockHistory />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/reports/sales"
+                    element={
+                        <ProtectedRoute>
+                            <SalesReport />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/reports/purchases"
+                    element={
+                        <ProtectedRoute>
+                            <PurchasesReport />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/reports/stock"
+                    element={
+                        <ProtectedRoute>
+                            <StockReport />
                         </ProtectedRoute>
                     }
                 />

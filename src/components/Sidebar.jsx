@@ -1,4 +1,4 @@
-﻿import { NavLink } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 
 function Sidebar() {
     const linkClasses = ({ isActive }) =>
@@ -25,6 +25,18 @@ function Sidebar() {
                 </NavLink>
                 <NavLink to="/inventory" className={linkClasses}>
                     Inventory
+                </NavLink>
+                <h3 className="text-xs uppercase text-slate-500 font-semibold mt-4 mb-1 px-2">
+                    Reports
+                </h3>
+                <NavLink to="/reports/sales" className={linkClasses}>
+                    Sales Report
+                </NavLink>
+                <NavLink to="/reports/purchases" className={linkClasses}>
+                    Purchases Report
+                </NavLink>
+                <NavLink to="/reports/stock" className={linkClasses}>
+                    Stock Report
                 </NavLink>
                 <NavLink to="/profile" className={linkClasses}>
                     Profile
