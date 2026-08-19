@@ -36,6 +36,7 @@ export default function FormModal({
           defaults[f.name] = initialValues[f.name] ?? "";
         }
       });
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setValues(defaults);
     }
   }, [open, initialValues, fields]);
@@ -79,12 +80,13 @@ export default function FormModal({
                   </label>
                 )}
 
-                {field.type === "text" || field.type === "email" || field.type === "number" ? (
+                {field.type === "text" || field.type === "email" || field.type === "number" || field.type === "password" ? (
                   <input
                     type={field.type}
                     value={values[field.name] ?? ""}
                     onChange={(e) => setField(field.name, e.target.value)}
                     step={field.type === "number" ? field.step || "0.01" : undefined}
+                    autoComplete={field.type === "password" ? "new-password" : undefined}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
                                focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />

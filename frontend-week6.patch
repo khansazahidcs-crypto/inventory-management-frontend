@@ -1,0 +1,1029 @@
+diff --git a/README.md b/README.md
+index 605be91..576dd20 100644
+--- a/README.md
++++ b/README.md
+@@ -60,3 +60,22 @@ src/
+ - **Automatic stock update** — marking a purchase as received automatically increases stock for every line item
+ - **Inventory levels** — view current stock for every product, with a low-stock filter
+ - **Stock history** — view the full movement log (before/after quantities, type, note) for any product
++
++## Features (Week 4)
++- **Sales invoices** — record a sale to a customer (or a walk-in) with one or more product line items; unit price auto-fills from the product's sale price but can be overridden
++- **Live totals** — the grand total is calculated as you type, before the invoice is even saved
++- **Automatic stock deduction** — completed sales immediately decrease stock for every line item; the form warns inline if a requested quantity exceeds current stock
++- **Sales history** — searchable, filterable (by status) list of every invoice, with a "Mark Completed" action for pending sales
++- **Printable invoice** — a dedicated invoice view (`/sales/:id`) formatted for `window.print()`, with a "Cancel Sale" action that restores stock
++
++## Features (Week 5)
++- **Dashboard** — real KPI cards (products, customers, suppliers, low stock, sales revenue, purchase cost, pending sales/purchases), a month-over-month sales comparison, a 7-day sales trend chart, recent sales/purchases, and a top-selling-products table
++- **Reports** — three report pages (Sales, Purchases, Stock), each with filters (date range, or low-stock only), summary cards, a data table, a CSV export button, and a "Print / Save as PDF" button (the browser's native print-to-PDF, since a server-generated PDF library couldn't be installed — see the backend README for why)
++
++## Features (Week 6) — Administration
++- **Roles** (`/roles`) — create/edit roles and choose exactly which permissions each one grants, via a checkbox list grouped by area (Master Data, Purchases, Sales, Inventory, Reports, Administration). A role still assigned to a user can't be deleted.
++- **Users** (`/users`) — create user accounts directly, assign a role, and activate/deactivate accounts. You can't deactivate or delete your own account.
++- **Settings** (`/settings`) — a simple form for the app-wide settings the backend exposes (company name, currency symbol, invoice footer note, default reorder level, low-stock alerts toggle).
++- **Activity Logs** (`/activity-logs`) — a read-only, filterable audit trail (by action type and date range) of who did what, across every module.
++- **Permission-aware navigation** — a new `usePermissions()` hook (`src/hooks/usePermissions.js`) fetches the current user's role and permissions once and is used to show/hide the whole "Administration" section of the sidebar. This is a UX nicety only — the backend's permission middleware is the real enforcement point, so even a user who somehow reaches `/roles` directly by URL still gets a `403` from the API and a friendly "you don't have permission" message instead of a blank/broken page.
++- **Shared component reuse** — Roles and Users are built on the same `DataTable` / `FormModal` / `useResourceList` pattern already used by Categories/Brands/Suppliers/Customers/Products (Users) or a close variant of it (Roles, which needed a grouped-checkbox permission picker instead of a simple field list). `FormModal` gained one new field type (`password`) as a small, additive change to support the "Add User" form.
+diff --git a/src/App.jsx b/src/App.jsx
+index dac469d..8284f3d 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -20,6 +20,10 @@ import StockHistory from "./pages/inventory/StockHistory";
+ import SalesReport from "./pages/reports/SalesReport";
+ import PurchasesReport from "./pages/reports/PurchasesReport";
+ import StockReport from "./pages/reports/StockReport";
++import RoleList from "./pages/roles/RoleList";
++import UserList from "./pages/users/UserList";
++import SettingsPage from "./pages/settings/SettingsPage";
++import ActivityLogList from "./pages/activity-logs/ActivityLogList";
+ 
+ function App() {
+     return (
+@@ -164,6 +168,38 @@ function App() {
+                         </ProtectedRoute>
+                     }
+                 />
++                <Route
++                    path="/roles"
++                    element={
++                        <ProtectedRoute>
++                            <RoleList />
++                        </ProtectedRoute>
++                    }
++                />
++                <Route
++                    path="/users"
++                    element={
++                        <ProtectedRoute>
++                            <UserList />
++                        </ProtectedRoute>
++                    }
++                />
++                <Route
++                    path="/settings"
++                    element={
++                        <ProtectedRoute>
++                            <SettingsPage />
++                        </ProtectedRoute>
++                    }
++                />
++                <Route
++                    path="/activity-logs"
++                    element={
++                        <ProtectedRoute>
++                            <ActivityLogList />
++                        </ProtectedRoute>
++                    }
++                />
+                 <Route
+                     path="/logout"
+                     element={
+diff --git a/src/api/services.js b/src/api/services.js
+index b031019..f0de847 100644
+--- a/src/api/services.js
++++ b/src/api/services.js
+@@ -76,6 +76,22 @@ export const dashboardService = {
+   summary: () => api.get("/dashboard/summary", { headers: authHeaders() }),
+ };
+ 
++export const roleService = {
++  ...createResourceService("roles"),
++  permissions: () => api.get("/permissions", { headers: authHeaders() }),
++};
++
++export const userService = createResourceService("users");
++
++export const settingService = {
++  list: () => api.get("/settings", { headers: authHeaders() }),
++  update: (settings) => api.put("/settings", { settings }, { headers: authHeaders() }),
++};
++
++export const activityLogService = {
++  list: (params = {}) => api.get("/activity-logs", { params, headers: authHeaders() }),
++};
++
+ export const reportService = {
+   sales: (params = {}) => api.get("/reports/sales", { params, headers: authHeaders() }),
+   purchases: (params = {}) => api.get("/reports/purchases", { params, headers: authHeaders() }),
+diff --git a/src/components/Sidebar.jsx b/src/components/Sidebar.jsx
+index 88725a0..8d66d88 100644
+--- a/src/components/Sidebar.jsx
++++ b/src/components/Sidebar.jsx
+@@ -1,6 +1,9 @@
+ import { NavLink } from "react-router-dom";
++import usePermissions from "../hooks/usePermissions";
+ 
+ function Sidebar() {
++    const { hasPermission } = usePermissions();
++
+     const linkClasses = ({ isActive }) =>
+         `block px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+             isActive
+@@ -8,8 +11,14 @@ function Sidebar() {
+                 : "text-slate-300 hover:bg-slate-800 hover:text-white"
+         }`;
+ 
++    const showAdminSection =
++        hasPermission("roles.manage") ||
++        hasPermission("users.manage") ||
++        hasPermission("settings.manage") ||
++        hasPermission("activity_logs.view");
++
+     return (
+-        <aside className="fixed top-16 left-0 bottom-0 w-60 bg-slate-900 border-r border-slate-800 p-4">
++        <aside className="fixed top-16 left-0 bottom-0 w-60 bg-slate-900 border-r border-slate-800 p-4 overflow-y-auto">
+             <h3 className="text-xs uppercase text-slate-500 font-semibold mb-3 px-2">
+                 Menu
+             </h3>
+@@ -38,6 +47,33 @@ function Sidebar() {
+                 <NavLink to="/reports/stock" className={linkClasses}>
+                     Stock Report
+                 </NavLink>
++                {showAdminSection && (
++                    <>
++                        <h3 className="text-xs uppercase text-slate-500 font-semibold mt-4 mb-1 px-2">
++                            Administration
++                        </h3>
++                        {hasPermission("roles.manage") && (
++                            <NavLink to="/roles" className={linkClasses}>
++                                Roles
++                            </NavLink>
++                        )}
++                        {hasPermission("users.manage") && (
++                            <NavLink to="/users" className={linkClasses}>
++                                Users
++                            </NavLink>
++                        )}
++                        {hasPermission("settings.manage") && (
++                            <NavLink to="/settings" className={linkClasses}>
++                                Settings
++                            </NavLink>
++                        )}
++                        {hasPermission("activity_logs.view") && (
++                            <NavLink to="/activity-logs" className={linkClasses}>
++                                Activity Logs
++                            </NavLink>
++                        )}
++                    </>
++                )}
+                 <NavLink to="/profile" className={linkClasses}>
+                     Profile
+                 </NavLink>
+diff --git a/src/components/common/FormModal.jsx b/src/components/common/FormModal.jsx
+index a8fadf2..39d1215 100644
+--- a/src/components/common/FormModal.jsx
++++ b/src/components/common/FormModal.jsx
+@@ -36,6 +36,7 @@ export default function FormModal({
+           defaults[f.name] = initialValues[f.name] ?? "";
+         }
+       });
++      // eslint-disable-next-line react-hooks/set-state-in-effect
+       setValues(defaults);
+     }
+   }, [open, initialValues, fields]);
+@@ -79,12 +80,13 @@ export default function FormModal({
+                   </label>
+                 )}
+ 
+-                {field.type === "text" || field.type === "email" || field.type === "number" ? (
++                {field.type === "text" || field.type === "email" || field.type === "number" || field.type === "password" ? (
+                   <input
+                     type={field.type}
+                     value={values[field.name] ?? ""}
+                     onChange={(e) => setField(field.name, e.target.value)}
+                     step={field.type === "number" ? field.step || "0.01" : undefined}
++                    autoComplete={field.type === "password" ? "new-password" : undefined}
+                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+                                focus:outline-none focus:ring-2 focus:ring-blue-500"
+                   />
+diff --git a/src/components/common/useResourceList.js b/src/components/common/useResourceList.js
+index 5e27b8f..5dd954f 100644
+--- a/src/components/common/useResourceList.js
++++ b/src/components/common/useResourceList.js
+@@ -21,6 +21,8 @@ export default function useResourceList(service, extraParams = {}) {
+   const [deleteTarget, setDeleteTarget] = useState(null);
+   const [deleting, setDeleting] = useState(false);
+ 
++  const extraParamsKey = JSON.stringify(extraParams);
++
+   const fetchRows = useCallback(async () => {
+     setLoading(true);
+     try {
+@@ -31,9 +33,10 @@ export default function useResourceList(service, extraParams = {}) {
+       setLoading(false);
+     }
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+-  }, [search, page, JSON.stringify(extraParams)]);
++  }, [search, page, extraParamsKey]);
+ 
+   useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect
+     fetchRows();
+   }, [fetchRows]);
+ 
+@@ -68,8 +71,10 @@ export default function useResourceList(service, extraParams = {}) {
+       setFormOpen(false);
+       fetchRows();
+     } catch (err) {
+-      if (err.response?.status === 422) {
+-        setErrors(err.response.data.errors || {});
++      if (err.response?.status === 422 && err.response.data.errors) {
++        setErrors(err.response.data.errors);
++      } else if (err.response?.data?.message) {
++        alert(err.response.data.message);
+       } else {
+         alert("Something went wrong. Please try again.");
+       }
+@@ -85,8 +90,8 @@ export default function useResourceList(service, extraParams = {}) {
+       await service.remove(deleteTarget.id);
+       setDeleteTarget(null);
+       fetchRows();
+-    } catch {
+-      alert("Failed to delete. Please try again.");
++    } catch (err) {
++      alert(err.response?.data?.message || "Failed to delete. Please try again.");
+     } finally {
+       setDeleting(false);
+     }
+diff --git a/src/hooks/usePermissions.js b/src/hooks/usePermissions.js
+new file mode 100644
+index 0000000..654c827
+--- /dev/null
++++ b/src/hooks/usePermissions.js
+@@ -0,0 +1,36 @@
++import { useEffect, useState } from "react";
++import api, { authHeaders } from "../api/axios";
++
++/**
++ * Fetches the current user (with their role + permissions) once per
++ * mount and exposes a hasPermission() check, so components can hide
++ * admin-only nav links / show a friendly message instead of letting the
++ * user click into something the API will 403 on anyway. The backend's
++ * CheckPermission middleware remains the real enforcement point; this
++ * is purely for a better UI experience.
++ */
++export default function usePermissions() {
++  const [user, setUser] = useState(null);
++  const [loading, setLoading] = useState(true);
++
++  useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect
++    setLoading(true);
++    api
++      .get("/user", { headers: authHeaders() })
++      .then((res) => {
++        setUser(res.data);
++        setLoading(false);
++      })
++      .catch((err) => {
++        console.error("Error fetching current user:", err);
++        setLoading(false);
++      });
++  }, []);
++
++  const permissionSlugs = user?.role?.permissions?.map((p) => p.slug) || [];
++
++  const hasPermission = (slug) => permissionSlugs.includes(slug);
++
++  return { user, loading, hasPermission, permissionSlugs };
++}
+diff --git a/src/pages/activity-logs/ActivityLogList.jsx b/src/pages/activity-logs/ActivityLogList.jsx
+new file mode 100644
+index 0000000..298996b
+--- /dev/null
++++ b/src/pages/activity-logs/ActivityLogList.jsx
+@@ -0,0 +1,149 @@
++import { useEffect, useState } from "react";
++import { activityLogService } from "../../api/services";
++
++const ACTION_STYLES = {
++  created: "bg-green-100 text-green-700",
++  updated: "bg-blue-100 text-blue-700",
++  deleted: "bg-red-100 text-red-700",
++  login: "bg-slate-100 text-slate-700",
++  logout: "bg-slate-100 text-slate-700",
++};
++
++export default function ActivityLogList() {
++  const [logs, setLogs] = useState([]);
++  const [action, setAction] = useState("");
++  const [dateFrom, setDateFrom] = useState("");
++  const [dateTo, setDateTo] = useState("");
++  const [loading, setLoading] = useState(true);
++  const [error, setError] = useState("");
++  const [reloadToken, setReloadToken] = useState(0);
++
++  useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect
++    setLoading(true);
++    activityLogService
++      .list({
++        action: action || undefined,
++        date_from: dateFrom || undefined,
++        date_to: dateTo || undefined,
++      })
++      .then((res) => {
++        setLogs(res.data.data);
++        setLoading(false);
++      })
++      .catch((err) => {
++        console.error("Error fetching activity logs:", err);
++        setError(
++          err.response?.status === 403
++            ? "You don't have permission to view activity logs."
++            : "Failed to load activity logs."
++        );
++        setLoading(false);
++      });
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [reloadToken]);
++
++  const applyFilters = (e) => {
++    e.preventDefault();
++    setReloadToken((t) => t + 1);
++  };
++
++  if (error) {
++    return <div className="p-6 text-center text-red-600">{error}</div>;
++  }
++
++  return (
++    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
++      <h2 className="text-lg font-semibold text-gray-900 mb-4">Activity Logs</h2>
++
++      <form onSubmit={applyFilters} className="flex flex-wrap gap-3 items-end mb-4">
++        <div>
++          <label className="block text-xs font-medium text-gray-600">Action</label>
++          <select
++            value={action}
++            onChange={(e) => setAction(e.target.value)}
++            className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
++          >
++            <option value="">All actions</option>
++            <option value="created">Created</option>
++            <option value="updated">Updated</option>
++            <option value="deleted">Deleted</option>
++            <option value="login">Login</option>
++            <option value="logout">Logout</option>
++          </select>
++        </div>
++        <div>
++          <label className="block text-xs font-medium text-gray-600">From</label>
++          <input
++            type="date"
++            value={dateFrom}
++            onChange={(e) => setDateFrom(e.target.value)}
++            className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
++          />
++        </div>
++        <div>
++          <label className="block text-xs font-medium text-gray-600">To</label>
++          <input
++            type="date"
++            value={dateTo}
++            onChange={(e) => setDateTo(e.target.value)}
++            className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
++          />
++        </div>
++        <button
++          type="submit"
++          className="px-4 py-2 text-sm rounded-lg bg-gray-700 text-white hover:bg-gray-800"
++        >
++          Apply Filter
++        </button>
++      </form>
++
++      <div className="overflow-x-auto">
++        <table className="w-full text-sm">
++          <thead>
++            <tr className="text-left text-gray-500 border-b border-gray-200">
++              <th className="py-2 pr-4 font-medium">When</th>
++              <th className="py-2 pr-4 font-medium">User</th>
++              <th className="py-2 pr-4 font-medium">Action</th>
++              <th className="py-2 pr-4 font-medium">Description</th>
++            </tr>
++          </thead>
++          <tbody>
++            {loading ? (
++              <tr>
++                <td colSpan={4} className="py-6 text-center text-gray-400">
++                  Loading...
++                </td>
++              </tr>
++            ) : logs.length === 0 ? (
++              <tr>
++                <td colSpan={4} className="py-6 text-center text-gray-400">
++                  No activity found.
++                </td>
++              </tr>
++            ) : (
++              logs.map((log) => (
++                <tr key={log.id} className="border-b border-gray-100 hover:bg-gray-50">
++                  <td className="py-3 pr-4 text-gray-500 whitespace-nowrap">
++                    {new Date(log.created_at).toLocaleString()}
++                  </td>
++                  <td className="py-3 pr-4 text-gray-700">{log.user_name}</td>
++                  <td className="py-3 pr-4">
++                    <span
++                      className={`px-2 py-1 rounded-full text-xs font-medium ${
++                        ACTION_STYLES[log.action] || "bg-gray-100 text-gray-600"
++                      }`}
++                    >
++                      {log.action}
++                    </span>
++                  </td>
++                  <td className="py-3 pr-4 text-gray-700">{log.description}</td>
++                </tr>
++              ))
++            )}
++          </tbody>
++        </table>
++      </div>
++    </div>
++  );
++}
+diff --git a/src/pages/roles/RoleFormModal.jsx b/src/pages/roles/RoleFormModal.jsx
+new file mode 100644
+index 0000000..596f785
+--- /dev/null
++++ b/src/pages/roles/RoleFormModal.jsx
+@@ -0,0 +1,150 @@
++import { useEffect, useState } from "react";
++
++const GROUP_LABELS = {
++  general: "General",
++  master_data: "Master Data",
++  purchases: "Purchases",
++  sales: "Sales",
++  inventory: "Inventory",
++  reports: "Reports",
++  administration: "Administration",
++};
++
++export default function RoleFormModal({
++  open,
++  title,
++  initialValues = {},
++  permissionGroups = {},
++  onClose,
++  onSubmit,
++  submitting = false,
++  errors = {},
++}) {
++  const [name, setName] = useState("");
++  const [description, setDescription] = useState("");
++  const [permissionIds, setPermissionIds] = useState([]);
++
++  useEffect(() => {
++    if (open) {
++      // eslint-disable-next-line react-hooks/set-state-in-effect
++      setName(initialValues.name || "");
++      setDescription(initialValues.description || "");
++      setPermissionIds((initialValues.permissions || []).map((p) => p.id));
++    }
++  }, [open, initialValues]);
++
++  if (!open) return null;
++
++  const togglePermission = (id) => {
++    setPermissionIds((prev) =>
++      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
++    );
++  };
++
++  const toggleGroup = (groupPermissions, allChecked) => {
++    const ids = groupPermissions.map((p) => p.id);
++    setPermissionIds((prev) =>
++      allChecked ? prev.filter((id) => !ids.includes(id)) : [...new Set([...prev, ...ids])]
++    );
++  };
++
++  const handleSubmit = (e) => {
++    e.preventDefault();
++    onSubmit({ name, description, permission_ids: permissionIds });
++  };
++
++  return (
++    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-8 overflow-y-auto">
++      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6">
++        <div className="flex items-center justify-between mb-4">
++          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
++          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">
++            &times;
++          </button>
++        </div>
++
++        <form onSubmit={handleSubmit}>
++          <div className="grid grid-cols-2 gap-4 mb-4">
++            <div>
++              <label className="block text-sm font-medium text-gray-700 mb-1">
++                Role Name <span className="text-red-500">*</span>
++              </label>
++              <input
++                type="text"
++                value={name}
++                onChange={(e) => setName(e.target.value)}
++                required
++                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
++              />
++              {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name[0]}</p>}
++            </div>
++            <div>
++              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
++              <input
++                type="text"
++                value={description}
++                onChange={(e) => setDescription(e.target.value)}
++                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
++              />
++            </div>
++          </div>
++
++          <label className="block text-sm font-medium text-gray-700 mb-2">Permissions</label>
++          <div className="border border-gray-200 rounded-lg p-4 max-h-72 overflow-y-auto space-y-4">
++            {Object.entries(permissionGroups).map(([group, permissions]) => {
++              const allChecked = permissions.every((p) => permissionIds.includes(p.id));
++              return (
++                <div key={group}>
++                  <label className="flex items-center gap-2 mb-2 cursor-pointer select-none">
++                    <input
++                      type="checkbox"
++                      checked={allChecked}
++                      onChange={() => toggleGroup(permissions, allChecked)}
++                      className="w-4 h-4"
++                    />
++                    <span className="text-sm font-semibold text-gray-800">
++                      {GROUP_LABELS[group] || group}
++                    </span>
++                  </label>
++                  <div className="grid grid-cols-2 gap-2 pl-6">
++                    {permissions.map((permission) => (
++                      <label
++                        key={permission.id}
++                        className="flex items-center gap-2 cursor-pointer select-none text-sm text-gray-600"
++                      >
++                        <input
++                          type="checkbox"
++                          checked={permissionIds.includes(permission.id)}
++                          onChange={() => togglePermission(permission.id)}
++                          className="w-4 h-4"
++                        />
++                        {permission.name}
++                      </label>
++                    ))}
++                  </div>
++                </div>
++              );
++            })}
++          </div>
++
++          <div className="mt-6 flex justify-end gap-3">
++            <button
++              type="button"
++              onClick={onClose}
++              className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
++            >
++              Cancel
++            </button>
++            <button
++              type="submit"
++              disabled={submitting}
++              className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
++            >
++              {submitting ? "Saving..." : "Save"}
++            </button>
++          </div>
++        </form>
++      </div>
++    </div>
++  );
++}
+diff --git a/src/pages/roles/RoleList.jsx b/src/pages/roles/RoleList.jsx
+new file mode 100644
+index 0000000..e415a84
+--- /dev/null
++++ b/src/pages/roles/RoleList.jsx
+@@ -0,0 +1,176 @@
++import { useEffect, useState } from "react";
++import { roleService } from "../../api/services";
++import ConfirmDialog from "../../components/common/ConfirmDialog";
++import RoleFormModal from "./RoleFormModal";
++
++export default function RoleList() {
++  const [roles, setRoles] = useState([]);
++  const [permissionGroups, setPermissionGroups] = useState({});
++  const [loading, setLoading] = useState(true);
++  const [error, setError] = useState("");
++  const [reloadToken, setReloadToken] = useState(0);
++
++  const [formOpen, setFormOpen] = useState(false);
++  const [editingRole, setEditingRole] = useState(null);
++  const [submitting, setSubmitting] = useState(false);
++  const [formErrors, setFormErrors] = useState({});
++
++  const [deleteTarget, setDeleteTarget] = useState(null);
++  const [deleting, setDeleting] = useState(false);
++  const [deleteError, setDeleteError] = useState("");
++
++  useEffect(() => {
++    // eslint-disable-next-line react-hooks/set-state-in-effect
++    setLoading(true);
++    Promise.all([roleService.list(), roleService.permissions()])
++      .then(([rolesRes, permissionsRes]) => {
++        setRoles(rolesRes.data.data);
++        setPermissionGroups(permissionsRes.data.data);
++        setLoading(false);
++      })
++      .catch((err) => {
++        console.error("Error fetching roles:", err);
++        setError(
++          err.response?.status === 403
++            ? "You don't have permission to manage roles."
++            : "Failed to load roles."
++        );
++        setLoading(false);
++      });
++  }, [reloadToken]);
++
++  const openAdd = () => {
++    setEditingRole(null);
++    setFormErrors({});
++    setFormOpen(true);
++  };
++
++  const openEdit = (role) => {
++    setEditingRole(role);
++    setFormErrors({});
++    setFormOpen(true);
++  };
++
++  const handleSubmit = async (values) => {
++    setSubmitting(true);
++    setFormErrors({});
++    try {
++      if (editingRole) {
++        await roleService.update(editingRole.id, values);
++      } else {
++        await roleService.create(values);
++      }
++      setFormOpen(false);
++      setReloadToken((t) => t + 1);
++    } catch (err) {
++      if (err.response?.status === 422) {
++        setFormErrors(err.response.data.errors || {});
++      } else {
++        alert(err.response?.data?.message || "Something went wrong. Please try again.");
++      }
++    } finally {
++      setSubmitting(false);
++    }
++  };
++
++  const confirmDelete = async () => {
++    if (!deleteTarget) return;
++    setDeleting(true);
++    setDeleteError("");
++    try {
++      await roleService.remove(deleteTarget.id);
++      setDeleteTarget(null);
++      setReloadToken((t) => t + 1);
++    } catch (err) {
++      setDeleteError(err.response?.data?.message || "Failed to delete this role.");
++    } finally {
++      setDeleting(false);
++    }
++  };
++
++  if (loading) {
++    return <div className="p-6 text-center text-gray-500">Loading roles...</div>;
++  }
++
++  if (error) {
++    return <div className="p-6 text-center text-red-600">{error}</div>;
++  }
++
++  return (
++    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
++      <div className="flex items-center justify-between mb-4">
++        <h2 className="text-lg font-semibold text-gray-900">Roles</h2>
++        <button
++          onClick={openAdd}
++          className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700"
++        >
++          + Add Role
++        </button>
++      </div>
++
++      <div className="overflow-x-auto">
++        <table className="w-full text-sm">
++          <thead>
++            <tr className="text-left text-gray-500 border-b border-gray-200">
++              <th className="py-2 pr-4 font-medium">Name</th>
++              <th className="py-2 pr-4 font-medium">Description</th>
++              <th className="py-2 pr-4 font-medium">Permissions</th>
++              <th className="py-2 pr-4 font-medium">Users</th>
++              <th className="py-2 pr-4 font-medium text-right">Actions</th>
++            </tr>
++          </thead>
++          <tbody>
++            {roles.map((role) => (
++              <tr key={role.id} className="border-b border-gray-100 hover:bg-gray-50">
++                <td className="py-3 pr-4 font-medium text-gray-800">{role.name}</td>
++                <td className="py-3 pr-4 text-gray-600">{role.description || "—"}</td>
++                <td className="py-3 pr-4 text-gray-600">{role.permissions.length}</td>
++                <td className="py-3 pr-4 text-gray-600">{role.users_count}</td>
++                <td className="py-3 pr-4 text-right whitespace-nowrap">
++                  <button
++                    onClick={() => openEdit(role)}
++                    className="text-blue-600 hover:underline text-sm mr-3"
++                  >
++                    Edit
++                  </button>
++                  <button
++                    onClick={() => {
++                      setDeleteError("");
++                      setDeleteTarget(role);
++                    }}
++                    className="text-red-600 hover:underline text-sm"
++                  >
++                    Delete
++                  </button>
++                </td>
++              </tr>
++            ))}
++          </tbody>
++        </table>
++      </div>
++
++      <RoleFormModal
++        open={formOpen}
++        title={editingRole ? "Edit Role" : "Add Role"}
++        initialValues={editingRole || {}}
++        permissionGroups={permissionGroups}
++        onClose={() => setFormOpen(false)}
++        onSubmit={handleSubmit}
++        submitting={submitting}
++        errors={formErrors}
++      />
++
++      <ConfirmDialog
++        open={!!deleteTarget}
++        title="Delete Role"
++        message={
++          deleteError ||
++          `Delete "${deleteTarget?.name}"? This cannot be undone.`
++        }
++        onConfirm={confirmDelete}
++        onCancel={() => setDeleteTarget(null)}
++        loading={deleting}
++      />
++    </div>
++  );
++}
+diff --git a/src/pages/settings/SettingsPage.jsx b/src/pages/settings/SettingsPage.jsx
+new file mode 100644
+index 0000000..92fef18
+--- /dev/null
++++ b/src/pages/settings/SettingsPage.jsx
+@@ -0,0 +1,137 @@
++import { useEffect, useState } from "react";
++import { settingService } from "../../api/services";
++
++const GROUP_LABELS = {
++  general: "General",
++  inventory: "Inventory",
++};
++
++export default function SettingsPage() {
++  const [groups, setGroups] = useState({});
++  const [values, setValues] = useState({});
++  const [loading, setLoading] = useState(true);
++  const [saving, setSaving] = useState(false);
++  const [error, setError] = useState("");
++  const [saveMessage, setSaveMessage] = useState("");
++
++  useEffect(() => {
++    settingService
++      .list()
++      .then((res) => {
++        setGroups(res.data.data);
++        const initialValues = {};
++        Object.values(res.data.data)
++          .flat()
++          .forEach((setting) => {
++            initialValues[setting.key] = setting.value;
++          });
++        setValues(initialValues);
++        setLoading(false);
++      })
++      .catch((err) => {
++        console.error("Error fetching settings:", err);
++        setError(
++          err.response?.status === 403
++            ? "You don't have permission to view settings."
++            : "Failed to load settings."
++        );
++        setLoading(false);
++      });
++  }, []);
++
++  const setField = (key, value) => {
++    setValues((prev) => ({ ...prev, [key]: value }));
++    setSaveMessage("");
++  };
++
++  const handleSave = async (e) => {
++    e.preventDefault();
++    setSaving(true);
++    setSaveMessage("");
++    try {
++      await settingService.update(values);
++      setSaveMessage("Settings saved successfully.");
++    } catch (err) {
++      alert(
++        err.response?.status === 403
++          ? "You don't have permission to update settings."
++          : "Failed to save settings."
++      );
++    } finally {
++      setSaving(false);
++    }
++  };
++
++  if (loading) {
++    return <div className="p-6 text-center text-gray-500">Loading settings...</div>;
++  }
++
++  if (error) {
++    return <div className="p-6 text-center text-red-600">{error}</div>;
++  }
++
++  return (
++    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-w-2xl">
++      <h2 className="text-lg font-semibold text-gray-900 mb-1">Application Settings</h2>
++      <p className="text-sm text-gray-500 mb-6">
++        These values are used across the app (e.g. on printed invoices).
++      </p>
++
++      {saveMessage && (
++        <div className="mb-4 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
++          {saveMessage}
++        </div>
++      )}
++
++      <form onSubmit={handleSave} className="space-y-6">
++        {Object.entries(groups).map(([group, settings]) => (
++          <div key={group}>
++            <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
++              {GROUP_LABELS[group] || group}
++            </h3>
++            <div className="space-y-4">
++              {settings.map((setting) => (
++                <div key={setting.key}>
++                  {setting.type === "boolean" ? (
++                    <label className="flex items-center gap-2 cursor-pointer select-none">
++                      <input
++                        type="checkbox"
++                        checked={!!values[setting.key]}
++                        onChange={(e) => setField(setting.key, e.target.checked)}
++                        className="w-4 h-4"
++                      />
++                      <span className="text-sm font-medium text-gray-700">{setting.label}</span>
++                    </label>
++                  ) : (
++                    <>
++                      <label className="block text-sm font-medium text-gray-700 mb-1">
++                        {setting.label}
++                      </label>
++                      <input
++                        type={setting.type === "integer" ? "number" : "text"}
++                        value={values[setting.key] ?? ""}
++                        onChange={(e) => setField(setting.key, e.target.value)}
++                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
++                                   focus:outline-none focus:ring-2 focus:ring-blue-500"
++                      />
++                    </>
++                  )}
++                </div>
++              ))}
++            </div>
++          </div>
++        ))}
++
++        <div className="pt-2">
++          <button
++            type="submit"
++            disabled={saving}
++            className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
++          >
++            {saving ? "Saving..." : "Save Settings"}
++          </button>
++        </div>
++      </form>
++    </div>
++  );
++}
+diff --git a/src/pages/users/UserList.jsx b/src/pages/users/UserList.jsx
+new file mode 100644
+index 0000000..e812b86
+--- /dev/null
++++ b/src/pages/users/UserList.jsx
+@@ -0,0 +1,97 @@
++import { useEffect, useState } from "react";
++import DataTable from "../../components/common/DataTable";
++import FormModal from "../../components/common/FormModal";
++import ConfirmDialog from "../../components/common/ConfirmDialog";
++import useResourceList from "../../components/common/useResourceList";
++import { userService, roleService } from "../../api/services";
++
++const columns = [
++  { key: "name", label: "Name" },
++  { key: "email", label: "Email" },
++  { key: "role_name", label: "Role", render: (r) => r.role_name || "— none —" },
++  {
++    key: "is_active",
++    label: "Status",
++    render: (r) => (
++      <span
++        className={`px-2 py-1 rounded-full text-xs ${
++          r.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
++        }`}
++      >
++        {r.is_active ? "Active" : "Inactive"}
++      </span>
++    ),
++  },
++];
++
++export default function UserList() {
++  const list = useResourceList(userService);
++  const [roles, setRoles] = useState([]);
++
++  useEffect(() => {
++    roleService
++      .list()
++      .then((res) => setRoles(res.data.data))
++      .catch((err) => console.error("Error fetching roles:", err));
++  }, []);
++
++  const roleOptions = roles.map((r) => ({ value: r.id, label: r.name }));
++
++  const isEditing = !!list.editingRow;
++
++  const fields = [
++    { name: "name", label: "Name", type: "text", required: true },
++    { name: "email", label: "Email", type: "email", required: true },
++    ...(isEditing
++      ? []
++      : [
++          { name: "password", label: "Password", type: "password", required: true },
++          {
++            name: "password_confirmation",
++            label: "Confirm Password",
++            type: "password",
++            required: true,
++          },
++        ]),
++    { name: "role_id", label: "Role", type: "select", options: roleOptions },
++    { name: "is_active", label: "Active", type: "toggle" },
++  ];
++
++  return (
++    <>
++      <DataTable
++        title="Users"
++        columns={columns}
++        rows={list.rows}
++        loading={list.loading}
++        search={list.search}
++        onSearch={list.handleSearch}
++        meta={list.meta}
++        onPageChange={list.setPage}
++        onAdd={list.openAdd}
++        onEdit={list.openEdit}
++        onDelete={list.setDeleteTarget}
++      />
++
++      <FormModal
++        open={list.formOpen}
++        title={isEditing ? "Edit User" : "Add User"}
++        fields={fields}
++        initialValues={list.editingRow || {}}
++        onClose={list.closeForm}
++        onSubmit={list.submitForm}
++        submitting={list.submitting}
++        errors={list.errors}
++      />
++
++      <ConfirmDialog
++        open={!!list.deleteTarget}
++        title="Delete User"
++        message={`Delete "${list.deleteTarget?.name}"? This cannot be undone.`}
++        onConfirm={list.confirmDelete}
++        onCancel={() => list.setDeleteTarget(null)}
++        loading={list.deleting}
++      />
++    </>
++  );
++}

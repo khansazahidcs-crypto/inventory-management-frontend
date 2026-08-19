@@ -76,6 +76,22 @@ export const dashboardService = {
   summary: () => api.get("/dashboard/summary", { headers: authHeaders() }),
 };
 
+export const roleService = {
+  ...createResourceService("roles"),
+  permissions: () => api.get("/permissions", { headers: authHeaders() }),
+};
+
+export const userService = createResourceService("users");
+
+export const settingService = {
+  list: () => api.get("/settings", { headers: authHeaders() }),
+  update: (settings) => api.put("/settings", { settings }, { headers: authHeaders() }),
+};
+
+export const activityLogService = {
+  list: (params = {}) => api.get("/activity-logs", { params, headers: authHeaders() }),
+};
+
 export const reportService = {
   sales: (params = {}) => api.get("/reports/sales", { params, headers: authHeaders() }),
   purchases: (params = {}) => api.get("/reports/purchases", { params, headers: authHeaders() }),

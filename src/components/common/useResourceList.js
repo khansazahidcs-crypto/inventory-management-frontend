@@ -21,6 +21,8 @@ export default function useResourceList(service, extraParams = {}) {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  const extraParamsKey = JSON.stringify(extraParams);
+
   const fetchRows = useCallback(async () => {
     setLoading(true);
     try {
@@ -31,9 +33,10 @@ export default function useResourceList(service, extraParams = {}) {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, page, JSON.stringify(extraParams)]);
+  }, [search, page, extraParamsKey]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchRows();
   }, [fetchRows]);
 
@@ -68,8 +71,10 @@ export default function useResourceList(service, extraParams = {}) {
       setFormOpen(false);
       fetchRows();
     } catch (err) {
-      if (err.response?.status === 422) {
-        setErrors(err.response.data.errors || {});
+      if (err.response?.status === 422 && err.response.data.errors) {
+        setErrors(err.response.data.errors);
+      } else if (err.response?.data?.message) {
+        alert(err.response.data.message);
       } else {
         alert("Something went wrong. Please try again.");
       }
@@ -85,8 +90,8 @@ export default function useResourceList(service, extraParams = {}) {
       await service.remove(deleteTarget.id);
       setDeleteTarget(null);
       fetchRows();
-    } catch {
-      alert("Failed to delete. Please try again.");
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to delete. Please try again.");
     } finally {
       setDeleting(false);
     }

@@ -20,6 +20,10 @@ import StockHistory from "./pages/inventory/StockHistory";
 import SalesReport from "./pages/reports/SalesReport";
 import PurchasesReport from "./pages/reports/PurchasesReport";
 import StockReport from "./pages/reports/StockReport";
+import RoleList from "./pages/roles/RoleList";
+import UserList from "./pages/users/UserList";
+import SettingsPage from "./pages/settings/SettingsPage";
+import ActivityLogList from "./pages/activity-logs/ActivityLogList";
 
 function App() {
     return (
@@ -161,6 +165,38 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <StockReport />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/roles"
+                    element={
+                        <ProtectedRoute>
+                            <RoleList />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/users"
+                    element={
+                        <ProtectedRoute>
+                            <UserList />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/settings"
+                    element={
+                        <ProtectedRoute>
+                            <SettingsPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/activity-logs"
+                    element={
+                        <ProtectedRoute>
+                            <ActivityLogList />
                         </ProtectedRoute>
                     }
                 />
