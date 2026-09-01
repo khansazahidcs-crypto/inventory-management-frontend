@@ -13,7 +13,10 @@ function Logout() {
                     headers: { Authorization: `Bearer ${token}` }
                 });
             } catch (err) {
-                console.log("Logout error", err);
+                // Logout can fail (expired token, network drop, etc.); we still
+                // clear the local session below, so just surface it for debugging
+                // instead of leaving a bare console.log in shipped code.
+                console.error("Logout request failed:", err);
             } finally {
                 localStorage.removeItem("token");
                 navigate("/login");

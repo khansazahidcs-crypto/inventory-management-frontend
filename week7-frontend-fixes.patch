@@ -1,0 +1,2237 @@
+From aedbcf88254a36e72b5981a59b447dfbe5771c22 Mon Sep 17 00:00:00 2001
+From: Khansa Zahid <khansa@example.com>
+Date: Tue, 1 Sep 2026 07:36:08 +0000
+Subject: [PATCH] Week 7: Remove stray dev artifacts, clean up leftover debug
+ log
+
+- Removed a duplicate/stale App.jsx and .patch files that had been
+  accidentally committed to the repository root (App.jsx at root was
+  out of sync with src/App.jsx, missing the reports/roles routes).
+- Logout.jsx: replaced a bare console.log with console.error for the
+  logout-request-failed case.
+---
+ App.jsx              |  153 -------
+ frontend-week5.patch |  996 ----------------------------------------
+ frontend-week6.patch | 1029 ------------------------------------------
+ src/pages/Logout.jsx |    5 +-
+ 4 files changed, 4 insertions(+), 2179 deletions(-)
+ delete mode 100644 App.jsx
+ delete mode 100644 frontend-week5.patch
+ delete mode 100644 frontend-week6.patch
+
+diff --git a/App.jsx b/App.jsx
+deleted file mode 100644
+index e7114c9..0000000
+--- a/App.jsx
++++ /dev/null
+@@ -1,153 +0,0 @@
+-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+-import Login from "./pages/Login";
+-import Register from "./pages/Register";
+-import Dashboard from "./pages/Dashboard";
+-import Profile from "./pages/Profile";
+-import Logout from "./pages/Logout";
+-import ProtectedRoute from "./components/ProtectedRoute";
+-import CategoryList from "./pages/categories/CategoryList";
+-import BrandList from "./pages/brands/BrandList";
+-import SupplierList from "./pages/suppliers/SupplierList";
+-import CustomerList from "./pages/customers/CustomerList";
+-import ProductList from "./pages/products/ProductList";
+-import PurchaseList from "./pages/purchases/PurchaseList";
+-import PurchaseCreate from "./pages/purchases/PurchaseCreate";
+-import SaleList from "./pages/sales/SaleList";
+-import SaleCreate from "./pages/sales/SaleCreate";
+-import SaleInvoice from "./pages/sales/SaleInvoice";
+-import InventoryList from "./pages/inventory/InventoryList";
+-import StockHistory from "./pages/inventory/StockHistory";
+-
+-function App() {
+-    return (
+-        <BrowserRouter>
+-            <Routes>
+-                <Route path="/" element={<Navigate to="/login" />} />
+-                <Route path="/login" element={<Login />} />
+-                <Route path="/register" element={<Register />} />
+-                <Route
+-                    path="/dashboard"
+-                    element={
+-                        <ProtectedRoute>
+-                            <Dashboard />
+-                        </ProtectedRoute>
+-                    }
+-                />
+-                <Route
+-                    path="/profile"
+-                    element={
+-                        <ProtectedRoute>
+-                            <Profile />
+-                        </ProtectedRoute>
+-                    }
+-                />
+-                <Route
+-                    path="/categories"
+-                    element={
+-                        <ProtectedRoute>
+-                            <CategoryList />
+-                        </ProtectedRoute>
+-                    }
+-                />
+-                <Route
+-                    path="/brands"
+-                    element={
+-                        <ProtectedRoute>
+-                            <BrandList />
+-                        </ProtectedRoute>
+-                    }
+-                />
+-                <Route
+-                    path="/suppliers"
+-                    element={
+-                        <ProtectedRoute>
+-                            <SupplierList />
+-                        </ProtectedRoute>
+-                    }
+-                />
+-                <Route
+-                    path="/customers"
+-                    element={
+-                        <ProtectedRoute>
+-                            <CustomerList />
+-                        </ProtectedRoute>
+-                    }
+-                />
+-                <Route
+-                    path="/products"
+-                    element={
+-                        <ProtectedRoute>
+-                            <ProductList />
+-                        </ProtectedRoute>
+-                    }
+-                />
+-                <Route
+-                    path="/purchases"
+-                    element={
+-                        <ProtectedRoute>
+-                            <PurchaseList />
+-                        </ProtectedRoute>
+-                    }
+-                />
+-                <Route
+-                    path="/purchases/new"
+-                    element={
+-                        <ProtectedRoute>
+-                            <PurchaseCreate />
+-                        </ProtectedRoute>
+-                    }
+-                />
+-                <Route
+-                    path="/sales"
+-                    element={
+-                        <ProtectedRoute>
+-                            <SaleList />
+-                        </ProtectedRoute>
+-                    }
+-                />
+-                <Route
+-                    path="/sales/new"
+-                    element={
+-                        <ProtectedRoute>
+-                            <SaleCreate />
+-                        </ProtectedRoute>
+-                    }
+-                />
+-                <Route
+-                    path="/sales/:id"
+-                    element={
+-                        <ProtectedRoute>
+-                            <SaleInvoice />
+-                        </ProtectedRoute>
+-                    }
+-                />
+-                <Route
+-                    path="/inventory"
+-                    element={
+-                        <ProtectedRoute>
+-                            <InventoryList />
+-                        </ProtectedRoute>
+-                    }
+-                />
+-                <Route
+-                    path="/inventory/:id/history"
+-                    element={
+-                        <ProtectedRoute>
+-                            <StockHistory />
+-                        </ProtectedRoute>
+-                    }
+-                />
+-                <Route
+-                    path="/logout"
+-                    element={
+-                        <ProtectedRoute>
+-                            <Logout />
+-                        </ProtectedRoute>
+-                    }
+-                />
+-            </Routes>
+-        </BrowserRouter>
+-    );
+-}
+-
+-export default App;
+\ No newline at end of file
+diff --git a/frontend-week5.patch b/frontend-week5.patch
+deleted file mode 100644
+index de76838..0000000
+--- a/frontend-week5.patch
++++ /dev/null
+@@ -1,996 +0,0 @@
+-diff --git a/src/App.jsx b/src/App.jsx
+-index 2953049..dac469d 100644
+---- a/src/App.jsx
+-+++ b/src/App.jsx
+-@@ -1,4 +1,4 @@
+--﻿import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+-+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+- import Login from "./pages/Login";
+- import Register from "./pages/Register";
+- import Dashboard from "./pages/Dashboard";
+-@@ -17,6 +17,9 @@ import SaleCreate from "./pages/sales/SaleCreate";
+- import SaleInvoice from "./pages/sales/SaleInvoice";
+- import InventoryList from "./pages/inventory/InventoryList";
+- import StockHistory from "./pages/inventory/StockHistory";
+-+import SalesReport from "./pages/reports/SalesReport";
+-+import PurchasesReport from "./pages/reports/PurchasesReport";
+-+import StockReport from "./pages/reports/StockReport";
+- 
+- function App() {
+-     return (
+-@@ -137,6 +140,30 @@ function App() {
+-                         </ProtectedRoute>
+-                     }
+-                 />
+-+                <Route
+-+                    path="/reports/sales"
+-+                    element={
+-+                        <ProtectedRoute>
+-+                            <SalesReport />
+-+                        </ProtectedRoute>
+-+                    }
+-+                />
+-+                <Route
+-+                    path="/reports/purchases"
+-+                    element={
+-+                        <ProtectedRoute>
+-+                            <PurchasesReport />
+-+                        </ProtectedRoute>
+-+                    }
+-+                />
+-+                <Route
+-+                    path="/reports/stock"
+-+                    element={
+-+                        <ProtectedRoute>
+-+                            <StockReport />
+-+                        </ProtectedRoute>
+-+                    }
+-+                />
+-                 <Route
+-                     path="/logout"
+-                     element={
+-diff --git a/src/api/services.js b/src/api/services.js
+-index 142f983..b031019 100644
+---- a/src/api/services.js
+-+++ b/src/api/services.js
+-@@ -70,4 +70,33 @@ export const inventoryService = {
+-   list: (params = {}) => api.get("/inventory", { params, headers: authHeaders() }),
+-   history: (productId, params = {}) =>
+-     api.get(`/inventory/${productId}/stock-history`, { params, headers: authHeaders() }),
+-+};
+-+
+-+export const dashboardService = {
+-+  summary: () => api.get("/dashboard/summary", { headers: authHeaders() }),
+-+};
+-+
+-+export const reportService = {
+-+  sales: (params = {}) => api.get("/reports/sales", { params, headers: authHeaders() }),
+-+  purchases: (params = {}) => api.get("/reports/purchases", { params, headers: authHeaders() }),
+-+  stock: (params = {}) => api.get("/reports/stock", { params, headers: authHeaders() }),
+-+
+-+  // Exports return a raw CSV file, so they need a manual authenticated fetch
+-+  // (a plain <a href> can't attach the Authorization header) that turns the
+-+  // response into a blob and triggers a browser download.
+-+  downloadCsv: async (reportType, params = {}, filename) => {
+-+    const response = await api.get(`/reports/${reportType}/export`, {
+-+      params,
+-+      headers: authHeaders(),
+-+      responseType: "blob",
+-+    });
+-+    const url = window.URL.createObjectURL(new Blob([response.data]));
+-+    const link = document.createElement("a");
+-+    link.href = url;
+-+    link.setAttribute("download", filename || `${reportType}-report.csv`);
+-+    document.body.appendChild(link);
+-+    link.click();
+-+    link.remove();
+-+    window.URL.revokeObjectURL(url);
+-+  },
+- };
+-\ No newline at end of file
+-diff --git a/src/components/Sidebar.jsx b/src/components/Sidebar.jsx
+-index f05245a..88725a0 100644
+---- a/src/components/Sidebar.jsx
+-+++ b/src/components/Sidebar.jsx
+-@@ -1,4 +1,4 @@
+--﻿import { NavLink } from "react-router-dom";
+-+import { NavLink } from "react-router-dom";
+- 
+- function Sidebar() {
+-     const linkClasses = ({ isActive }) =>
+-@@ -26,6 +26,18 @@ function Sidebar() {
+-                 <NavLink to="/inventory" className={linkClasses}>
+-                     Inventory
+-                 </NavLink>
+-+                <h3 className="text-xs uppercase text-slate-500 font-semibold mt-4 mb-1 px-2">
+-+                    Reports
+-+                </h3>
+-+                <NavLink to="/reports/sales" className={linkClasses}>
+-+                    Sales Report
+-+                </NavLink>
+-+                <NavLink to="/reports/purchases" className={linkClasses}>
+-+                    Purchases Report
+-+                </NavLink>
+-+                <NavLink to="/reports/stock" className={linkClasses}>
+-+                    Stock Report
+-+                </NavLink>
+-                 <NavLink to="/profile" className={linkClasses}>
+-                     Profile
+-                 </NavLink>
+-diff --git a/src/pages/Dashboard.jsx b/src/pages/Dashboard.jsx
+-index cde31e3..57a395f 100644
+---- a/src/pages/Dashboard.jsx
+-+++ b/src/pages/Dashboard.jsx
+-@@ -1,12 +1,232 @@
+-+import { useEffect, useState } from "react";
+-+import { Link } from "react-router-dom";
+- import Layout from "../components/Layout";
+-+import { dashboardService } from "../api/services";
+- 
+--function Dashboard() {
+--    return (
+--        <Layout>
+--            <h1 className="text-2xl font-bold mb-2">Dashboard</h1>
+--            <p className="text-slate-400">Welcome to your dashboard</p>
+--        </Layout>
+--    );
+-+function formatCurrency(value) {
+-+  return Number(value || 0).toLocaleString(undefined, {
+-+    minimumFractionDigits: 2,
+-+    maximumFractionDigits: 2,
+-+  });
+- }
+- 
+--export default Dashboard;
+-\ No newline at end of file
+-+function StatCard({ label, value, sub, accent = "text-white" }) {
+-+  return (
+-+    <div className="bg-slate-900 border border-slate-800 rounded-lg p-5">
+-+      <p className="text-slate-400 text-sm mb-1">{label}</p>
+-+      <p className={`text-2xl font-bold ${accent}`}>{value}</p>
+-+      {sub && <p className="text-slate-500 text-xs mt-1">{sub}</p>}
+-+    </div>
+-+  );
+-+}
+-+
+-+function SalesTrendChart({ trend }) {
+-+  const max = Math.max(1, ...trend.map((d) => d.total));
+-+
+-+  return (
+-+    <div className="bg-slate-900 border border-slate-800 rounded-lg p-5">
+-+      <h2 className="text-lg font-semibold mb-4">Sales — Last 7 Days</h2>
+-+      <div className="flex items-end gap-3 h-40">
+-+        {trend.map((day) => {
+-+          const heightPct = Math.max(4, Math.round((day.total / max) * 100));
+-+          const label = new Date(day.date).toLocaleDateString(undefined, {
+-+            weekday: "short",
+-+          });
+-+          return (
+-+            <div key={day.date} className="flex-1 flex flex-col items-center gap-2">
+-+              <div className="w-full flex items-end h-32">
+-+                <div
+-+                  className="w-full bg-blue-600 rounded-t-md transition-all"
+-+                  style={{ height: `${heightPct}%` }}
+-+                  title={`${day.date}: ${formatCurrency(day.total)}`}
+-+                />
+-+              </div>
+-+              <span className="text-slate-500 text-xs">{label}</span>
+-+            </div>
+-+          );
+-+        })}
+-+      </div>
+-+    </div>
+-+  );
+-+}
+-+
+-+export default function Dashboard() {
+-+  const [data, setData] = useState(null);
+-+  const [loading, setLoading] = useState(true);
+-+  const [error, setError] = useState("");
+-+
+-+  useEffect(() => {
+-+    dashboardService
+-+      .summary()
+-+      .then((res) => {
+-+        setData(res.data.data);
+-+        setLoading(false);
+-+      })
+-+      .catch((err) => {
+-+        console.error("Error fetching dashboard summary:", err);
+-+        setError("Failed to load dashboard data.");
+-+        setLoading(false);
+-+      });
+-+  }, []);
+-+
+-+  return (
+-+    <Layout>
+-+      <h1 className="text-2xl font-bold mb-2">Dashboard</h1>
+-+      <p className="text-slate-400 mb-6">Welcome to your dashboard</p>
+-+
+-+      {loading && <p className="text-slate-400">Loading dashboard...</p>}
+-+      {error && <p className="text-red-400">{error}</p>}
+-+
+-+      {data && (
+-+        <div className="flex flex-col gap-6">
+-+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+-+            <StatCard label="Total Products" value={data.total_products} />
+-+            <StatCard label="Total Customers" value={data.total_customers} />
+-+            <StatCard label="Total Suppliers" value={data.total_suppliers} />
+-+            <StatCard
+-+              label="Low Stock Items"
+-+              value={data.low_stock_count}
+-+              accent={data.low_stock_count > 0 ? "text-amber-400" : "text-white"}
+-+            />
+-+          </div>
+-+
+-+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+-+            <StatCard
+-+              label="Sales Revenue (All Time)"
+-+              value={formatCurrency(data.sales_revenue_total)}
+-+              accent="text-green-400"
+-+            />
+-+            <StatCard
+-+              label="Purchases Cost (All Time)"
+-+              value={formatCurrency(data.purchases_cost_total)}
+-+              accent="text-blue-400"
+-+            />
+-+            <StatCard
+-+              label="Pending Sales"
+-+              value={data.pending_sales_count}
+-+              sub="awaiting completion"
+-+            />
+-+            <StatCard
+-+              label="Pending Purchases"
+-+              value={data.pending_purchases_count}
+-+              sub="awaiting receipt"
+-+            />
+-+          </div>
+-+
+-+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+-+            <div className="md:col-span-1 bg-slate-900 border border-slate-800 rounded-lg p-5">
+-+              <p className="text-slate-400 text-sm mb-1">Sales This Month</p>
+-+              <p className="text-2xl font-bold text-white">
+-+                {formatCurrency(data.sales_this_month)}
+-+              </p>
+-+              {data.sales_month_over_month_change !== null && (
+-+                <p
+-+                  className={`text-xs mt-1 ${
+-+                    data.sales_month_over_month_change >= 0
+-+                      ? "text-green-400"
+-+                      : "text-red-400"
+-+                  }`}
+-+                >
+-+                  {data.sales_month_over_month_change >= 0 ? "▲" : "▼"}{" "}
+-+                  {Math.abs(data.sales_month_over_month_change)}% vs last month (
+-+                  {formatCurrency(data.sales_last_month)})
+-+                </p>
+-+              )}
+-+            </div>
+-+            <div className="md:col-span-2">
+-+              <SalesTrendChart trend={data.sales_trend_last_7_days} />
+-+            </div>
+-+          </div>
+-+
+-+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+-+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-5">
+-+              <div className="flex justify-between items-center mb-3">
+-+                <h2 className="text-lg font-semibold">Recent Sales</h2>
+-+                <Link to="/reports/sales" className="text-blue-400 text-sm hover:underline">
+-+                  View report →
+-+                </Link>
+-+              </div>
+-+              {data.recent_sales.length === 0 ? (
+-+                <p className="text-slate-500 text-sm">No sales yet.</p>
+-+              ) : (
+-+                <table className="w-full text-sm">
+-+                  <tbody>
+-+                    {data.recent_sales.map((sale) => (
+-+                      <tr key={sale.id} className="border-t border-slate-800">
+-+                        <td className="py-2 text-slate-300">{sale.invoice_no}</td>
+-+                        <td className="py-2 text-slate-400">
+-+                          {sale.customer_name || sale.customer?.name || "Walk-in"}
+-+                        </td>
+-+                        <td className="py-2 text-slate-500">{sale.sale_date}</td>
+-+                        <td className="py-2 text-right text-white">
+-+                          {formatCurrency(sale.total_amount)}
+-+                        </td>
+-+                      </tr>
+-+                    ))}
+-+                  </tbody>
+-+                </table>
+-+              )}
+-+            </div>
+-+
+-+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-5">
+-+              <div className="flex justify-between items-center mb-3">
+-+                <h2 className="text-lg font-semibold">Recent Purchases</h2>
+-+                <Link to="/reports/purchases" className="text-blue-400 text-sm hover:underline">
+-+                  View report →
+-+                </Link>
+-+              </div>
+-+              {data.recent_purchases.length === 0 ? (
+-+                <p className="text-slate-500 text-sm">No purchases yet.</p>
+-+              ) : (
+-+                <table className="w-full text-sm">
+-+                  <tbody>
+-+                    {data.recent_purchases.map((purchase) => (
+-+                      <tr key={purchase.id} className="border-t border-slate-800">
+-+                        <td className="py-2 text-slate-300">{purchase.invoice_no}</td>
+-+                        <td className="py-2 text-slate-400">
+-+                          {purchase.supplier_name || purchase.supplier?.name || "-"}
+-+                        </td>
+-+                        <td className="py-2 text-slate-500">{purchase.purchase_date}</td>
+-+                        <td className="py-2 text-right text-white">
+-+                          {formatCurrency(purchase.total_amount)}
+-+                        </td>
+-+                      </tr>
+-+                    ))}
+-+                  </tbody>
+-+                </table>
+-+              )}
+-+            </div>
+-+          </div>
+-+
+-+          <div className="bg-slate-900 border border-slate-800 rounded-lg p-5">
+-+            <h2 className="text-lg font-semibold mb-3">Top Selling Products</h2>
+-+            {data.top_selling_products.length === 0 ? (
+-+              <p className="text-slate-500 text-sm">No completed sales yet.</p>
+-+            ) : (
+-+              <table className="w-full text-sm">
+-+                <thead>
+-+                  <tr className="text-slate-500 text-left">
+-+                    <th className="pb-2 font-medium">Product</th>
+-+                    <th className="pb-2 font-medium text-right">Qty Sold</th>
+-+                    <th className="pb-2 font-medium text-right">Revenue</th>
+-+                  </tr>
+-+                </thead>
+-+                <tbody>
+-+                  {data.top_selling_products.map((p) => (
+-+                    <tr key={p.product_id} className="border-t border-slate-800">
+-+                      <td className="py-2 text-slate-200">{p.product_name}</td>
+-+                      <td className="py-2 text-right text-slate-300">{p.quantity_sold}</td>
+-+                      <td className="py-2 text-right text-white">
+-+                        {formatCurrency(p.revenue)}
+-+                      </td>
+-+                    </tr>
+-+                  ))}
+-+                </tbody>
+-+              </table>
+-+            )}
+-+          </div>
+-+        </div>
+-+      )}
+-+    </Layout>
+-+  );
+-+}
+-diff --git a/src/pages/inventory/InventoryList.jsx b/src/pages/inventory/InventoryList.jsx
+-index febdc8c..f1b253f 100644
+---- a/src/pages/inventory/InventoryList.jsx
+-+++ b/src/pages/inventory/InventoryList.jsx
+-@@ -1,4 +1,4 @@
+--﻿import { useEffect, useState, useCallback } from "react";
+-+import { useEffect, useState, useCallback } from "react";
+- import { Link } from "react-router-dom";
+- import { inventoryService } from "../../api/services";
+- 
+-diff --git a/src/pages/inventory/StockHistory.jsx b/src/pages/inventory/StockHistory.jsx
+-index 00dab41..ed6b75e 100644
+---- a/src/pages/inventory/StockHistory.jsx
+-+++ b/src/pages/inventory/StockHistory.jsx
+-@@ -1,4 +1,4 @@
+--﻿import { useEffect, useState, useCallback } from "react";
+-+import { useEffect, useState, useCallback } from "react";
+- import { useParams, Link } from "react-router-dom";
+- import { inventoryService } from "../../api/services";
+- 
+-diff --git a/src/pages/purchases/PurchaseCreate.jsx b/src/pages/purchases/PurchaseCreate.jsx
+-index c8eeb76..e5367e2 100644
+---- a/src/pages/purchases/PurchaseCreate.jsx
+-+++ b/src/pages/purchases/PurchaseCreate.jsx
+-@@ -1,4 +1,4 @@
+--﻿import React, { useState, useEffect } from "react";
+-+import React, { useState, useEffect } from "react";
+- import { purchaseService, supplierService, productService } from "../../api/services";
+- import { useNavigate } from "react-router-dom";
+- 
+-diff --git a/src/pages/purchases/PurchaseList.jsx b/src/pages/purchases/PurchaseList.jsx
+-index 8777194..c7e4eaa 100644
+---- a/src/pages/purchases/PurchaseList.jsx
+-+++ b/src/pages/purchases/PurchaseList.jsx
+-@@ -1,4 +1,4 @@
+--﻿import React, { useEffect, useState } from "react";
+-+import React, { useEffect, useState } from "react";
+- import { purchaseService } from "../../api/services";
+- import { Link } from "react-router-dom";
+- 
+-diff --git a/src/pages/reports/PurchasesReport.jsx b/src/pages/reports/PurchasesReport.jsx
+-new file mode 100644
+-index 0000000..81c7849
+---- /dev/null
+-+++ b/src/pages/reports/PurchasesReport.jsx
+-@@ -0,0 +1,202 @@
+-+import { useEffect, useState } from "react";
+-+import { Link } from "react-router-dom";
+-+import { reportService } from "../../api/services";
+-+
+-+const formatCurrency = (value) =>
+-+  Number(value || 0).toLocaleString(undefined, {
+-+    minimumFractionDigits: 2,
+-+    maximumFractionDigits: 2,
+-+  });
+-+
+-+export default function PurchasesReport() {
+-+  const [dateFrom, setDateFrom] = useState("");
+-+  const [dateTo, setDateTo] = useState("");
+-+  const [rows, setRows] = useState([]);
+-+  const [summary, setSummary] = useState(null);
+-+  const [loading, setLoading] = useState(true);
+-+  const [error, setError] = useState("");
+-+  const [reloadToken, setReloadToken] = useState(0);
+-+  const [exporting, setExporting] = useState(false);
+-+
+-+  useEffect(() => {
+-+    // eslint-disable-next-line react-hooks/set-state-in-effect
+-+    setLoading(true);
+-+    reportService
+-+      .purchases({ date_from: dateFrom || undefined, date_to: dateTo || undefined })
+-+      .then((res) => {
+-+        setRows(res.data.data);
+-+        setSummary(res.data.summary);
+-+        setLoading(false);
+-+      })
+-+      .catch((err) => {
+-+        console.error("Error fetching purchases report:", err);
+-+        setError("Failed to load the purchases report.");
+-+        setLoading(false);
+-+      });
+-+    // eslint-disable-next-line react-hooks/exhaustive-deps
+-+  }, [reloadToken]);
+-+
+-+  const applyFilters = (e) => {
+-+    e.preventDefault();
+-+    setReloadToken((t) => t + 1);
+-+  };
+-+
+-+  const handleExportCsv = async () => {
+-+    setExporting(true);
+-+    try {
+-+      await reportService.downloadCsv(
+-+        "purchases",
+-+        { date_from: dateFrom || undefined, date_to: dateTo || undefined },
+-+        "purchases-report.csv"
+-+      );
+-+    } catch (err) {
+-+      console.error("Error exporting CSV:", err);
+-+      alert("Failed to export CSV.");
+-+    } finally {
+-+      setExporting(false);
+-+    }
+-+  };
+-+
+-+  return (
+-+    <div className="p-6 max-w-5xl mx-auto">
+-+      <style>{`
+-+        @media print {
+-+          .no-print { display: none !important; }
+-+          body { background: white !important; }
+-+        }
+-+      `}</style>
+-+
+-+      <div className="no-print flex justify-between items-center mb-4">
+-+        <Link to="/dashboard" className="text-blue-600 hover:underline text-sm">
+-+          &larr; Back to Dashboard
+-+        </Link>
+-+        <div className="space-x-2">
+-+          <button
+-+            onClick={handleExportCsv}
+-+            disabled={exporting}
+-+            className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800 disabled:opacity-50"
+-+          >
+-+            {exporting ? "Exporting..." : "Export CSV"}
+-+          </button>
+-+          <button
+-+            onClick={() => window.print()}
+-+            className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+-+          >
+-+            Print / Save as PDF
+-+          </button>
+-+        </div>
+-+      </div>
+-+
+-+      <div className="bg-white shadow rounded-lg p-8">
+-+        <h1 className="text-2xl font-bold mb-1">Purchases Report</h1>
+-+        <p className="text-sm text-gray-500 mb-6">
+-+          {dateFrom || dateTo
+-+            ? `${dateFrom || "start"} to ${dateTo || "today"}`
+-+            : "All received purchases"}
+-+        </p>
+-+
+-+        <form onSubmit={applyFilters} className="no-print flex flex-wrap gap-3 items-end mb-6">
+-+          <div>
+-+            <label className="block text-xs font-medium text-gray-600">From</label>
+-+            <input
+-+              type="date"
+-+              value={dateFrom}
+-+              onChange={(e) => setDateFrom(e.target.value)}
+-+              className="border p-2 rounded"
+-+            />
+-+          </div>
+-+          <div>
+-+            <label className="block text-xs font-medium text-gray-600">To</label>
+-+            <input
+-+              type="date"
+-+              value={dateTo}
+-+              onChange={(e) => setDateTo(e.target.value)}
+-+              className="border p-2 rounded"
+-+            />
+-+          </div>
+-+          <button
+-+            type="submit"
+-+            className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800"
+-+          >
+-+            Apply Filter
+-+          </button>
+-+          {(dateFrom || dateTo) && (
+-+            <button
+-+              type="button"
+-+              onClick={() => {
+-+                setDateFrom("");
+-+                setDateTo("");
+-+                setReloadToken((t) => t + 1);
+-+              }}
+-+              className="text-sm text-gray-500 hover:underline"
+-+            >
+-+              Clear
+-+            </button>
+-+          )}
+-+        </form>
+-+
+-+        {error && <div className="text-red-600 mb-4">{error}</div>}
+-+
+-+        {loading ? (
+-+          <p className="text-gray-500">Loading report...</p>
+-+        ) : (
+-+          <>
+-+            {summary && (
+-+              <div className="grid grid-cols-3 gap-4 mb-6">
+-+                <div className="border rounded-lg p-4">
+-+                  <p className="text-xs text-gray-500">Purchase Orders</p>
+-+                  <p className="text-xl font-bold">{summary.count}</p>
+-+                </div>
+-+                <div className="border rounded-lg p-4">
+-+                  <p className="text-xs text-gray-500">Total Cost</p>
+-+                  <p className="text-xl font-bold text-blue-700">
+-+                    {formatCurrency(summary.total_cost)}
+-+                  </p>
+-+                </div>
+-+                <div className="border rounded-lg p-4">
+-+                  <p className="text-xs text-gray-500">Average Order Value</p>
+-+                  <p className="text-xl font-bold">
+-+                    {formatCurrency(summary.average_order_value)}
+-+                  </p>
+-+                </div>
+-+              </div>
+-+            )}
+-+
+-+            <table className="w-full border-collapse">
+-+              <thead>
+-+                <tr className="border-b-2 border-gray-800 text-left text-sm">
+-+                  <th className="py-2">Invoice No.</th>
+-+                  <th className="py-2">Supplier</th>
+-+                  <th className="py-2">Date</th>
+-+                  <th className="py-2 text-right">Total</th>
+-+                </tr>
+-+              </thead>
+-+              <tbody>
+-+                {rows.length > 0 ? (
+-+                  rows.map((purchase) => (
+-+                    <tr key={purchase.id} className="border-b border-gray-200 text-sm">
+-+                      <td className="py-2">{purchase.invoice_no}</td>
+-+                      <td className="py-2">
+-+                        {purchase.supplier_name || purchase.supplier?.name || "-"}
+-+                      </td>
+-+                      <td className="py-2">{purchase.purchase_date}</td>
+-+                      <td className="py-2 text-right">
+-+                        {formatCurrency(purchase.total_amount)}
+-+                      </td>
+-+                    </tr>
+-+                  ))
+-+                ) : (
+-+                  <tr>
+-+                    <td colSpan="4" className="text-center py-6 text-gray-500">
+-+                      No received purchases in this range.
+-+                    </td>
+-+                  </tr>
+-+                )}
+-+              </tbody>
+-+            </table>
+-+          </>
+-+        )}
+-+      </div>
+-+    </div>
+-+  );
+-+}
+-diff --git a/src/pages/reports/SalesReport.jsx b/src/pages/reports/SalesReport.jsx
+-new file mode 100644
+-index 0000000..837b9d2
+---- /dev/null
+-+++ b/src/pages/reports/SalesReport.jsx
+-@@ -0,0 +1,200 @@
+-+import { useEffect, useState } from "react";
+-+import { Link } from "react-router-dom";
+-+import { reportService } from "../../api/services";
+-+
+-+const formatCurrency = (value) =>
+-+  Number(value || 0).toLocaleString(undefined, {
+-+    minimumFractionDigits: 2,
+-+    maximumFractionDigits: 2,
+-+  });
+-+
+-+export default function SalesReport() {
+-+  const [dateFrom, setDateFrom] = useState("");
+-+  const [dateTo, setDateTo] = useState("");
+-+  const [rows, setRows] = useState([]);
+-+  const [summary, setSummary] = useState(null);
+-+  const [loading, setLoading] = useState(true);
+-+  const [error, setError] = useState("");
+-+  const [reloadToken, setReloadToken] = useState(0);
+-+  const [exporting, setExporting] = useState(false);
+-+
+-+  useEffect(() => {
+-+    // eslint-disable-next-line react-hooks/set-state-in-effect
+-+    setLoading(true);
+-+    reportService
+-+      .sales({ date_from: dateFrom || undefined, date_to: dateTo || undefined })
+-+      .then((res) => {
+-+        setRows(res.data.data);
+-+        setSummary(res.data.summary);
+-+        setLoading(false);
+-+      })
+-+      .catch((err) => {
+-+        console.error("Error fetching sales report:", err);
+-+        setError("Failed to load the sales report.");
+-+        setLoading(false);
+-+      });
+-+    // eslint-disable-next-line react-hooks/exhaustive-deps
+-+  }, [reloadToken]);
+-+
+-+  const applyFilters = (e) => {
+-+    e.preventDefault();
+-+    setReloadToken((t) => t + 1);
+-+  };
+-+
+-+  const handleExportCsv = async () => {
+-+    setExporting(true);
+-+    try {
+-+      await reportService.downloadCsv(
+-+        "sales",
+-+        { date_from: dateFrom || undefined, date_to: dateTo || undefined },
+-+        "sales-report.csv"
+-+      );
+-+    } catch (err) {
+-+      console.error("Error exporting CSV:", err);
+-+      alert("Failed to export CSV.");
+-+    } finally {
+-+      setExporting(false);
+-+    }
+-+  };
+-+
+-+  return (
+-+    <div className="p-6 max-w-5xl mx-auto">
+-+      <style>{`
+-+        @media print {
+-+          .no-print { display: none !important; }
+-+          body { background: white !important; }
+-+        }
+-+      `}</style>
+-+
+-+      <div className="no-print flex justify-between items-center mb-4">
+-+        <Link to="/dashboard" className="text-blue-600 hover:underline text-sm">
+-+          &larr; Back to Dashboard
+-+        </Link>
+-+        <div className="space-x-2">
+-+          <button
+-+            onClick={handleExportCsv}
+-+            disabled={exporting}
+-+            className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800 disabled:opacity-50"
+-+          >
+-+            {exporting ? "Exporting..." : "Export CSV"}
+-+          </button>
+-+          <button
+-+            onClick={() => window.print()}
+-+            className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+-+          >
+-+            Print / Save as PDF
+-+          </button>
+-+        </div>
+-+      </div>
+-+
+-+      <div className="bg-white shadow rounded-lg p-8">
+-+        <h1 className="text-2xl font-bold mb-1">Sales Report</h1>
+-+        <p className="text-sm text-gray-500 mb-6">
+-+          {dateFrom || dateTo
+-+            ? `${dateFrom || "start"} to ${dateTo || "today"}`
+-+            : "All completed sales"}
+-+        </p>
+-+
+-+        <form onSubmit={applyFilters} className="no-print flex flex-wrap gap-3 items-end mb-6">
+-+          <div>
+-+            <label className="block text-xs font-medium text-gray-600">From</label>
+-+            <input
+-+              type="date"
+-+              value={dateFrom}
+-+              onChange={(e) => setDateFrom(e.target.value)}
+-+              className="border p-2 rounded"
+-+            />
+-+          </div>
+-+          <div>
+-+            <label className="block text-xs font-medium text-gray-600">To</label>
+-+            <input
+-+              type="date"
+-+              value={dateTo}
+-+              onChange={(e) => setDateTo(e.target.value)}
+-+              className="border p-2 rounded"
+-+            />
+-+          </div>
+-+          <button
+-+            type="submit"
+-+            className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800"
+-+          >
+-+            Apply Filter
+-+          </button>
+-+          {(dateFrom || dateTo) && (
+-+            <button
+-+              type="button"
+-+              onClick={() => {
+-+                setDateFrom("");
+-+                setDateTo("");
+-+                setReloadToken((t) => t + 1);
+-+              }}
+-+              className="text-sm text-gray-500 hover:underline"
+-+            >
+-+              Clear
+-+            </button>
+-+          )}
+-+        </form>
+-+
+-+        {error && <div className="text-red-600 mb-4">{error}</div>}
+-+
+-+        {loading ? (
+-+          <p className="text-gray-500">Loading report...</p>
+-+        ) : (
+-+          <>
+-+            {summary && (
+-+              <div className="grid grid-cols-3 gap-4 mb-6">
+-+                <div className="border rounded-lg p-4">
+-+                  <p className="text-xs text-gray-500">Invoices</p>
+-+                  <p className="text-xl font-bold">{summary.count}</p>
+-+                </div>
+-+                <div className="border rounded-lg p-4">
+-+                  <p className="text-xs text-gray-500">Total Revenue</p>
+-+                  <p className="text-xl font-bold text-green-700">
+-+                    {formatCurrency(summary.total_revenue)}
+-+                  </p>
+-+                </div>
+-+                <div className="border rounded-lg p-4">
+-+                  <p className="text-xs text-gray-500">Average Order Value</p>
+-+                  <p className="text-xl font-bold">
+-+                    {formatCurrency(summary.average_order_value)}
+-+                  </p>
+-+                </div>
+-+              </div>
+-+            )}
+-+
+-+            <table className="w-full border-collapse">
+-+              <thead>
+-+                <tr className="border-b-2 border-gray-800 text-left text-sm">
+-+                  <th className="py-2">Invoice No.</th>
+-+                  <th className="py-2">Customer</th>
+-+                  <th className="py-2">Date</th>
+-+                  <th className="py-2 text-right">Total</th>
+-+                </tr>
+-+              </thead>
+-+              <tbody>
+-+                {rows.length > 0 ? (
+-+                  rows.map((sale) => (
+-+                    <tr key={sale.id} className="border-b border-gray-200 text-sm">
+-+                      <td className="py-2">{sale.invoice_no}</td>
+-+                      <td className="py-2">
+-+                        {sale.customer_name || sale.customer?.name || "Walk-in Customer"}
+-+                      </td>
+-+                      <td className="py-2">{sale.sale_date}</td>
+-+                      <td className="py-2 text-right">{formatCurrency(sale.total_amount)}</td>
+-+                    </tr>
+-+                  ))
+-+                ) : (
+-+                  <tr>
+-+                    <td colSpan="4" className="text-center py-6 text-gray-500">
+-+                      No completed sales in this range.
+-+                    </td>
+-+                  </tr>
+-+                )}
+-+              </tbody>
+-+            </table>
+-+          </>
+-+        )}
+-+      </div>
+-+    </div>
+-+  );
+-+}
+-diff --git a/src/pages/reports/StockReport.jsx b/src/pages/reports/StockReport.jsx
+-new file mode 100644
+-index 0000000..53f587f
+---- /dev/null
+-+++ b/src/pages/reports/StockReport.jsx
+-@@ -0,0 +1,171 @@
+-+import { useEffect, useState } from "react";
+-+import { Link } from "react-router-dom";
+-+import { reportService } from "../../api/services";
+-+
+-+const formatCurrency = (value) =>
+-+  Number(value || 0).toLocaleString(undefined, {
+-+    minimumFractionDigits: 2,
+-+    maximumFractionDigits: 2,
+-+  });
+-+
+-+export default function StockReport() {
+-+  const [lowStockOnly, setLowStockOnly] = useState(false);
+-+  const [rows, setRows] = useState([]);
+-+  const [summary, setSummary] = useState(null);
+-+  const [loading, setLoading] = useState(true);
+-+  const [error, setError] = useState("");
+-+  const [exporting, setExporting] = useState(false);
+-+
+-+  useEffect(() => {
+-+    // eslint-disable-next-line react-hooks/set-state-in-effect
+-+    setLoading(true);
+-+    reportService
+-+      .stock({ low_stock: lowStockOnly ? 1 : undefined })
+-+      .then((res) => {
+-+        setRows(res.data.data);
+-+        setSummary(res.data.summary);
+-+        setLoading(false);
+-+      })
+-+      .catch((err) => {
+-+        console.error("Error fetching stock report:", err);
+-+        setError("Failed to load the stock report.");
+-+        setLoading(false);
+-+      });
+-+  }, [lowStockOnly]);
+-+
+-+  const handleExportCsv = async () => {
+-+    setExporting(true);
+-+    try {
+-+      await reportService.downloadCsv(
+-+        "stock",
+-+        { low_stock: lowStockOnly ? 1 : undefined },
+-+        "stock-report.csv"
+-+      );
+-+    } catch (err) {
+-+      console.error("Error exporting CSV:", err);
+-+      alert("Failed to export CSV.");
+-+    } finally {
+-+      setExporting(false);
+-+    }
+-+  };
+-+
+-+  return (
+-+    <div className="p-6 max-w-5xl mx-auto">
+-+      <style>{`
+-+        @media print {
+-+          .no-print { display: none !important; }
+-+          body { background: white !important; }
+-+        }
+-+      `}</style>
+-+
+-+      <div className="no-print flex justify-between items-center mb-4">
+-+        <Link to="/dashboard" className="text-blue-600 hover:underline text-sm">
+-+          &larr; Back to Dashboard
+-+        </Link>
+-+        <div className="space-x-2">
+-+          <button
+-+            onClick={handleExportCsv}
+-+            disabled={exporting}
+-+            className="bg-gray-700 text-white px-4 py-2 rounded text-sm hover:bg-gray-800 disabled:opacity-50"
+-+          >
+-+            {exporting ? "Exporting..." : "Export CSV"}
+-+          </button>
+-+          <button
+-+            onClick={() => window.print()}
+-+            className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+-+          >
+-+            Print / Save as PDF
+-+          </button>
+-+        </div>
+-+      </div>
+-+
+-+      <div className="bg-white shadow rounded-lg p-8">
+-+        <h1 className="text-2xl font-bold mb-1">Stock Report</h1>
+-+        <p className="text-sm text-gray-500 mb-6">Current stock levels and valuation</p>
+-+
+-+        <label className="no-print flex items-center gap-2 mb-6 text-sm">
+-+          <input
+-+            type="checkbox"
+-+            checked={lowStockOnly}
+-+            onChange={(e) => setLowStockOnly(e.target.checked)}
+-+          />
+-+          Show low-stock items only
+-+        </label>
+-+
+-+        {error && <div className="text-red-600 mb-4">{error}</div>}
+-+
+-+        {loading ? (
+-+          <p className="text-gray-500">Loading report...</p>
+-+        ) : (
+-+          <>
+-+            {summary && (
+-+              <div className="grid grid-cols-3 gap-4 mb-6">
+-+                <div className="border rounded-lg p-4">
+-+                  <p className="text-xs text-gray-500">Products</p>
+-+                  <p className="text-xl font-bold">{summary.total_products}</p>
+-+                </div>
+-+                <div className="border rounded-lg p-4">
+-+                  <p className="text-xs text-gray-500">Total Stock Value</p>
+-+                  <p className="text-xl font-bold text-blue-700">
+-+                    {formatCurrency(summary.total_stock_value)}
+-+                  </p>
+-+                </div>
+-+                <div className="border rounded-lg p-4">
+-+                  <p className="text-xs text-gray-500">Low Stock Items</p>
+-+                  <p className="text-xl font-bold text-amber-600">
+-+                    {summary.low_stock_count}
+-+                  </p>
+-+                </div>
+-+              </div>
+-+            )}
+-+
+-+            <table className="w-full border-collapse">
+-+              <thead>
+-+                <tr className="border-b-2 border-gray-800 text-left text-sm">
+-+                  <th className="py-2">SKU</th>
+-+                  <th className="py-2">Product</th>
+-+                  <th className="py-2">Category</th>
+-+                  <th className="py-2 text-right">Stock Qty</th>
+-+                  <th className="py-2 text-right">Reorder Level</th>
+-+                  <th className="py-2 text-right">Stock Value</th>
+-+                  <th className="py-2">Status</th>
+-+                </tr>
+-+              </thead>
+-+              <tbody>
+-+                {rows.length > 0 ? (
+-+                  rows.map((p) => (
+-+                    <tr key={p.id} className="border-b border-gray-200 text-sm">
+-+                      <td className="py-2">{p.sku}</td>
+-+                      <td className="py-2">{p.name}</td>
+-+                      <td className="py-2">{p.category_name || "-"}</td>
+-+                      <td className="py-2 text-right">{p.stock_quantity}</td>
+-+                      <td className="py-2 text-right">{p.reorder_level}</td>
+-+                      <td className="py-2 text-right">{formatCurrency(p.stock_value)}</td>
+-+                      <td className="py-2">
+-+                        {p.is_low_stock ? (
+-+                          <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-semibold">
+-+                            Low Stock
+-+                          </span>
+-+                        ) : (
+-+                          <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">
+-+                            OK
+-+                          </span>
+-+                        )}
+-+                      </td>
+-+                    </tr>
+-+                  ))
+-+                ) : (
+-+                  <tr>
+-+                    <td colSpan="7" className="text-center py-6 text-gray-500">
+-+                      No products found.
+-+                    </td>
+-+                  </tr>
+-+                )}
+-+              </tbody>
+-+            </table>
+-+          </>
+-+        )}
+-+      </div>
+-+    </div>
+-+  );
+-+}
+diff --git a/frontend-week6.patch b/frontend-week6.patch
+deleted file mode 100644
+index 9396cc7..0000000
+--- a/frontend-week6.patch
++++ /dev/null
+@@ -1,1029 +0,0 @@
+-diff --git a/README.md b/README.md
+-index 605be91..576dd20 100644
+---- a/README.md
+-+++ b/README.md
+-@@ -60,3 +60,22 @@ src/
+- - **Automatic stock update** — marking a purchase as received automatically increases stock for every line item
+- - **Inventory levels** — view current stock for every product, with a low-stock filter
+- - **Stock history** — view the full movement log (before/after quantities, type, note) for any product
+-+
+-+## Features (Week 4)
+-+- **Sales invoices** — record a sale to a customer (or a walk-in) with one or more product line items; unit price auto-fills from the product's sale price but can be overridden
+-+- **Live totals** — the grand total is calculated as you type, before the invoice is even saved
+-+- **Automatic stock deduction** — completed sales immediately decrease stock for every line item; the form warns inline if a requested quantity exceeds current stock
+-+- **Sales history** — searchable, filterable (by status) list of every invoice, with a "Mark Completed" action for pending sales
+-+- **Printable invoice** — a dedicated invoice view (`/sales/:id`) formatted for `window.print()`, with a "Cancel Sale" action that restores stock
+-+
+-+## Features (Week 5)
+-+- **Dashboard** — real KPI cards (products, customers, suppliers, low stock, sales revenue, purchase cost, pending sales/purchases), a month-over-month sales comparison, a 7-day sales trend chart, recent sales/purchases, and a top-selling-products table
+-+- **Reports** — three report pages (Sales, Purchases, Stock), each with filters (date range, or low-stock only), summary cards, a data table, a CSV export button, and a "Print / Save as PDF" button (the browser's native print-to-PDF, since a server-generated PDF library couldn't be installed — see the backend README for why)
+-+
+-+## Features (Week 6) — Administration
+-+- **Roles** (`/roles`) — create/edit roles and choose exactly which permissions each one grants, via a checkbox list grouped by area (Master Data, Purchases, Sales, Inventory, Reports, Administration). A role still assigned to a user can't be deleted.
+-+- **Users** (`/users`) — create user accounts directly, assign a role, and activate/deactivate accounts. You can't deactivate or delete your own account.
+-+- **Settings** (`/settings`) — a simple form for the app-wide settings the backend exposes (company name, currency symbol, invoice footer note, default reorder level, low-stock alerts toggle).
+-+- **Activity Logs** (`/activity-logs`) — a read-only, filterable audit trail (by action type and date range) of who did what, across every module.
+-+- **Permission-aware navigation** — a new `usePermissions()` hook (`src/hooks/usePermissions.js`) fetches the current user's role and permissions once and is used to show/hide the whole "Administration" section of the sidebar. This is a UX nicety only — the backend's permission middleware is the real enforcement point, so even a user who somehow reaches `/roles` directly by URL still gets a `403` from the API and a friendly "you don't have permission" message instead of a blank/broken page.
+-+- **Shared component reuse** — Roles and Users are built on the same `DataTable` / `FormModal` / `useResourceList` pattern already used by Categories/Brands/Suppliers/Customers/Products (Users) or a close variant of it (Roles, which needed a grouped-checkbox permission picker instead of a simple field list). `FormModal` gained one new field type (`password`) as a small, additive change to support the "Add User" form.
+-diff --git a/src/App.jsx b/src/App.jsx
+-index dac469d..8284f3d 100644
+---- a/src/App.jsx
+-+++ b/src/App.jsx
+-@@ -20,6 +20,10 @@ import StockHistory from "./pages/inventory/StockHistory";
+- import SalesReport from "./pages/reports/SalesReport";
+- import PurchasesReport from "./pages/reports/PurchasesReport";
+- import StockReport from "./pages/reports/StockReport";
+-+import RoleList from "./pages/roles/RoleList";
+-+import UserList from "./pages/users/UserList";
+-+import SettingsPage from "./pages/settings/SettingsPage";
+-+import ActivityLogList from "./pages/activity-logs/ActivityLogList";
+- 
+- function App() {
+-     return (
+-@@ -164,6 +168,38 @@ function App() {
+-                         </ProtectedRoute>
+-                     }
+-                 />
+-+                <Route
+-+                    path="/roles"
+-+                    element={
+-+                        <ProtectedRoute>
+-+                            <RoleList />
+-+                        </ProtectedRoute>
+-+                    }
+-+                />
+-+                <Route
+-+                    path="/users"
+-+                    element={
+-+                        <ProtectedRoute>
+-+                            <UserList />
+-+                        </ProtectedRoute>
+-+                    }
+-+                />
+-+                <Route
+-+                    path="/settings"
+-+                    element={
+-+                        <ProtectedRoute>
+-+                            <SettingsPage />
+-+                        </ProtectedRoute>
+-+                    }
+-+                />
+-+                <Route
+-+                    path="/activity-logs"
+-+                    element={
+-+                        <ProtectedRoute>
+-+                            <ActivityLogList />
+-+                        </ProtectedRoute>
+-+                    }
+-+                />
+-                 <Route
+-                     path="/logout"
+-                     element={
+-diff --git a/src/api/services.js b/src/api/services.js
+-index b031019..f0de847 100644
+---- a/src/api/services.js
+-+++ b/src/api/services.js
+-@@ -76,6 +76,22 @@ export const dashboardService = {
+-   summary: () => api.get("/dashboard/summary", { headers: authHeaders() }),
+- };
+- 
+-+export const roleService = {
+-+  ...createResourceService("roles"),
+-+  permissions: () => api.get("/permissions", { headers: authHeaders() }),
+-+};
+-+
+-+export const userService = createResourceService("users");
+-+
+-+export const settingService = {
+-+  list: () => api.get("/settings", { headers: authHeaders() }),
+-+  update: (settings) => api.put("/settings", { settings }, { headers: authHeaders() }),
+-+};
+-+
+-+export const activityLogService = {
+-+  list: (params = {}) => api.get("/activity-logs", { params, headers: authHeaders() }),
+-+};
+-+
+- export const reportService = {
+-   sales: (params = {}) => api.get("/reports/sales", { params, headers: authHeaders() }),
+-   purchases: (params = {}) => api.get("/reports/purchases", { params, headers: authHeaders() }),
+-diff --git a/src/components/Sidebar.jsx b/src/components/Sidebar.jsx
+-index 88725a0..8d66d88 100644
+---- a/src/components/Sidebar.jsx
+-+++ b/src/components/Sidebar.jsx
+-@@ -1,6 +1,9 @@
+- import { NavLink } from "react-router-dom";
+-+import usePermissions from "../hooks/usePermissions";
+- 
+- function Sidebar() {
+-+    const { hasPermission } = usePermissions();
+-+
+-     const linkClasses = ({ isActive }) =>
+-         `block px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+-             isActive
+-@@ -8,8 +11,14 @@ function Sidebar() {
+-                 : "text-slate-300 hover:bg-slate-800 hover:text-white"
+-         }`;
+- 
+-+    const showAdminSection =
+-+        hasPermission("roles.manage") ||
+-+        hasPermission("users.manage") ||
+-+        hasPermission("settings.manage") ||
+-+        hasPermission("activity_logs.view");
+-+
+-     return (
+--        <aside className="fixed top-16 left-0 bottom-0 w-60 bg-slate-900 border-r border-slate-800 p-4">
+-+        <aside className="fixed top-16 left-0 bottom-0 w-60 bg-slate-900 border-r border-slate-800 p-4 overflow-y-auto">
+-             <h3 className="text-xs uppercase text-slate-500 font-semibold mb-3 px-2">
+-                 Menu
+-             </h3>
+-@@ -38,6 +47,33 @@ function Sidebar() {
+-                 <NavLink to="/reports/stock" className={linkClasses}>
+-                     Stock Report
+-                 </NavLink>
+-+                {showAdminSection && (
+-+                    <>
+-+                        <h3 className="text-xs uppercase text-slate-500 font-semibold mt-4 mb-1 px-2">
+-+                            Administration
+-+                        </h3>
+-+                        {hasPermission("roles.manage") && (
+-+                            <NavLink to="/roles" className={linkClasses}>
+-+                                Roles
+-+                            </NavLink>
+-+                        )}
+-+                        {hasPermission("users.manage") && (
+-+                            <NavLink to="/users" className={linkClasses}>
+-+                                Users
+-+                            </NavLink>
+-+                        )}
+-+                        {hasPermission("settings.manage") && (
+-+                            <NavLink to="/settings" className={linkClasses}>
+-+                                Settings
+-+                            </NavLink>
+-+                        )}
+-+                        {hasPermission("activity_logs.view") && (
+-+                            <NavLink to="/activity-logs" className={linkClasses}>
+-+                                Activity Logs
+-+                            </NavLink>
+-+                        )}
+-+                    </>
+-+                )}
+-                 <NavLink to="/profile" className={linkClasses}>
+-                     Profile
+-                 </NavLink>
+-diff --git a/src/components/common/FormModal.jsx b/src/components/common/FormModal.jsx
+-index a8fadf2..39d1215 100644
+---- a/src/components/common/FormModal.jsx
+-+++ b/src/components/common/FormModal.jsx
+-@@ -36,6 +36,7 @@ export default function FormModal({
+-           defaults[f.name] = initialValues[f.name] ?? "";
+-         }
+-       });
+-+      // eslint-disable-next-line react-hooks/set-state-in-effect
+-       setValues(defaults);
+-     }
+-   }, [open, initialValues, fields]);
+-@@ -79,12 +80,13 @@ export default function FormModal({
+-                   </label>
+-                 )}
+- 
+--                {field.type === "text" || field.type === "email" || field.type === "number" ? (
+-+                {field.type === "text" || field.type === "email" || field.type === "number" || field.type === "password" ? (
+-                   <input
+-                     type={field.type}
+-                     value={values[field.name] ?? ""}
+-                     onChange={(e) => setField(field.name, e.target.value)}
+-                     step={field.type === "number" ? field.step || "0.01" : undefined}
+-+                    autoComplete={field.type === "password" ? "new-password" : undefined}
+-                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+-                                focus:outline-none focus:ring-2 focus:ring-blue-500"
+-                   />
+-diff --git a/src/components/common/useResourceList.js b/src/components/common/useResourceList.js
+-index 5e27b8f..5dd954f 100644
+---- a/src/components/common/useResourceList.js
+-+++ b/src/components/common/useResourceList.js
+-@@ -21,6 +21,8 @@ export default function useResourceList(service, extraParams = {}) {
+-   const [deleteTarget, setDeleteTarget] = useState(null);
+-   const [deleting, setDeleting] = useState(false);
+- 
+-+  const extraParamsKey = JSON.stringify(extraParams);
+-+
+-   const fetchRows = useCallback(async () => {
+-     setLoading(true);
+-     try {
+-@@ -31,9 +33,10 @@ export default function useResourceList(service, extraParams = {}) {
+-       setLoading(false);
+-     }
+-     // eslint-disable-next-line react-hooks/exhaustive-deps
+--  }, [search, page, JSON.stringify(extraParams)]);
+-+  }, [search, page, extraParamsKey]);
+- 
+-   useEffect(() => {
+-+    // eslint-disable-next-line react-hooks/set-state-in-effect
+-     fetchRows();
+-   }, [fetchRows]);
+- 
+-@@ -68,8 +71,10 @@ export default function useResourceList(service, extraParams = {}) {
+-       setFormOpen(false);
+-       fetchRows();
+-     } catch (err) {
+--      if (err.response?.status === 422) {
+--        setErrors(err.response.data.errors || {});
+-+      if (err.response?.status === 422 && err.response.data.errors) {
+-+        setErrors(err.response.data.errors);
+-+      } else if (err.response?.data?.message) {
+-+        alert(err.response.data.message);
+-       } else {
+-         alert("Something went wrong. Please try again.");
+-       }
+-@@ -85,8 +90,8 @@ export default function useResourceList(service, extraParams = {}) {
+-       await service.remove(deleteTarget.id);
+-       setDeleteTarget(null);
+-       fetchRows();
+--    } catch {
+--      alert("Failed to delete. Please try again.");
+-+    } catch (err) {
+-+      alert(err.response?.data?.message || "Failed to delete. Please try again.");
+-     } finally {
+-       setDeleting(false);
+-     }
+-diff --git a/src/hooks/usePermissions.js b/src/hooks/usePermissions.js
+-new file mode 100644
+-index 0000000..654c827
+---- /dev/null
+-+++ b/src/hooks/usePermissions.js
+-@@ -0,0 +1,36 @@
+-+import { useEffect, useState } from "react";
+-+import api, { authHeaders } from "../api/axios";
+-+
+-+/**
+-+ * Fetches the current user (with their role + permissions) once per
+-+ * mount and exposes a hasPermission() check, so components can hide
+-+ * admin-only nav links / show a friendly message instead of letting the
+-+ * user click into something the API will 403 on anyway. The backend's
+-+ * CheckPermission middleware remains the real enforcement point; this
+-+ * is purely for a better UI experience.
+-+ */
+-+export default function usePermissions() {
+-+  const [user, setUser] = useState(null);
+-+  const [loading, setLoading] = useState(true);
+-+
+-+  useEffect(() => {
+-+    // eslint-disable-next-line react-hooks/set-state-in-effect
+-+    setLoading(true);
+-+    api
+-+      .get("/user", { headers: authHeaders() })
+-+      .then((res) => {
+-+        setUser(res.data);
+-+        setLoading(false);
+-+      })
+-+      .catch((err) => {
+-+        console.error("Error fetching current user:", err);
+-+        setLoading(false);
+-+      });
+-+  }, []);
+-+
+-+  const permissionSlugs = user?.role?.permissions?.map((p) => p.slug) || [];
+-+
+-+  const hasPermission = (slug) => permissionSlugs.includes(slug);
+-+
+-+  return { user, loading, hasPermission, permissionSlugs };
+-+}
+-diff --git a/src/pages/activity-logs/ActivityLogList.jsx b/src/pages/activity-logs/ActivityLogList.jsx
+-new file mode 100644
+-index 0000000..298996b
+---- /dev/null
+-+++ b/src/pages/activity-logs/ActivityLogList.jsx
+-@@ -0,0 +1,149 @@
+-+import { useEffect, useState } from "react";
+-+import { activityLogService } from "../../api/services";
+-+
+-+const ACTION_STYLES = {
+-+  created: "bg-green-100 text-green-700",
+-+  updated: "bg-blue-100 text-blue-700",
+-+  deleted: "bg-red-100 text-red-700",
+-+  login: "bg-slate-100 text-slate-700",
+-+  logout: "bg-slate-100 text-slate-700",
+-+};
+-+
+-+export default function ActivityLogList() {
+-+  const [logs, setLogs] = useState([]);
+-+  const [action, setAction] = useState("");
+-+  const [dateFrom, setDateFrom] = useState("");
+-+  const [dateTo, setDateTo] = useState("");
+-+  const [loading, setLoading] = useState(true);
+-+  const [error, setError] = useState("");
+-+  const [reloadToken, setReloadToken] = useState(0);
+-+
+-+  useEffect(() => {
+-+    // eslint-disable-next-line react-hooks/set-state-in-effect
+-+    setLoading(true);
+-+    activityLogService
+-+      .list({
+-+        action: action || undefined,
+-+        date_from: dateFrom || undefined,
+-+        date_to: dateTo || undefined,
+-+      })
+-+      .then((res) => {
+-+        setLogs(res.data.data);
+-+        setLoading(false);
+-+      })
+-+      .catch((err) => {
+-+        console.error("Error fetching activity logs:", err);
+-+        setError(
+-+          err.response?.status === 403
+-+            ? "You don't have permission to view activity logs."
+-+            : "Failed to load activity logs."
+-+        );
+-+        setLoading(false);
+-+      });
+-+    // eslint-disable-next-line react-hooks/exhaustive-deps
+-+  }, [reloadToken]);
+-+
+-+  const applyFilters = (e) => {
+-+    e.preventDefault();
+-+    setReloadToken((t) => t + 1);
+-+  };
+-+
+-+  if (error) {
+-+    return <div className="p-6 text-center text-red-600">{error}</div>;
+-+  }
+-+
+-+  return (
+-+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+-+      <h2 className="text-lg font-semibold text-gray-900 mb-4">Activity Logs</h2>
+-+
+-+      <form onSubmit={applyFilters} className="flex flex-wrap gap-3 items-end mb-4">
+-+        <div>
+-+          <label className="block text-xs font-medium text-gray-600">Action</label>
+-+          <select
+-+            value={action}
+-+            onChange={(e) => setAction(e.target.value)}
+-+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+-+          >
+-+            <option value="">All actions</option>
+-+            <option value="created">Created</option>
+-+            <option value="updated">Updated</option>
+-+            <option value="deleted">Deleted</option>
+-+            <option value="login">Login</option>
+-+            <option value="logout">Logout</option>
+-+          </select>
+-+        </div>
+-+        <div>
+-+          <label className="block text-xs font-medium text-gray-600">From</label>
+-+          <input
+-+            type="date"
+-+            value={dateFrom}
+-+            onChange={(e) => setDateFrom(e.target.value)}
+-+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+-+          />
+-+        </div>
+-+        <div>
+-+          <label className="block text-xs font-medium text-gray-600">To</label>
+-+          <input
+-+            type="date"
+-+            value={dateTo}
+-+            onChange={(e) => setDateTo(e.target.value)}
+-+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+-+          />
+-+        </div>
+-+        <button
+-+          type="submit"
+-+          className="px-4 py-2 text-sm rounded-lg bg-gray-700 text-white hover:bg-gray-800"
+-+        >
+-+          Apply Filter
+-+        </button>
+-+      </form>
+-+
+-+      <div className="overflow-x-auto">
+-+        <table className="w-full text-sm">
+-+          <thead>
+-+            <tr className="text-left text-gray-500 border-b border-gray-200">
+-+              <th className="py-2 pr-4 font-medium">When</th>
+-+              <th className="py-2 pr-4 font-medium">User</th>
+-+              <th className="py-2 pr-4 font-medium">Action</th>
+-+              <th className="py-2 pr-4 font-medium">Description</th>
+-+            </tr>
+-+          </thead>
+-+          <tbody>
+-+            {loading ? (
+-+              <tr>
+-+                <td colSpan={4} className="py-6 text-center text-gray-400">
+-+                  Loading...
+-+                </td>
+-+              </tr>
+-+            ) : logs.length === 0 ? (
+-+              <tr>
+-+                <td colSpan={4} className="py-6 text-center text-gray-400">
+-+                  No activity found.
+-+                </td>
+-+              </tr>
+-+            ) : (
+-+              logs.map((log) => (
+-+                <tr key={log.id} className="border-b border-gray-100 hover:bg-gray-50">
+-+                  <td className="py-3 pr-4 text-gray-500 whitespace-nowrap">
+-+                    {new Date(log.created_at).toLocaleString()}
+-+                  </td>
+-+                  <td className="py-3 pr-4 text-gray-700">{log.user_name}</td>
+-+                  <td className="py-3 pr-4">
+-+                    <span
+-+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+-+                        ACTION_STYLES[log.action] || "bg-gray-100 text-gray-600"
+-+                      }`}
+-+                    >
+-+                      {log.action}
+-+                    </span>
+-+                  </td>
+-+                  <td className="py-3 pr-4 text-gray-700">{log.description}</td>
+-+                </tr>
+-+              ))
+-+            )}
+-+          </tbody>
+-+        </table>
+-+      </div>
+-+    </div>
+-+  );
+-+}
+-diff --git a/src/pages/roles/RoleFormModal.jsx b/src/pages/roles/RoleFormModal.jsx
+-new file mode 100644
+-index 0000000..596f785
+---- /dev/null
+-+++ b/src/pages/roles/RoleFormModal.jsx
+-@@ -0,0 +1,150 @@
+-+import { useEffect, useState } from "react";
+-+
+-+const GROUP_LABELS = {
+-+  general: "General",
+-+  master_data: "Master Data",
+-+  purchases: "Purchases",
+-+  sales: "Sales",
+-+  inventory: "Inventory",
+-+  reports: "Reports",
+-+  administration: "Administration",
+-+};
+-+
+-+export default function RoleFormModal({
+-+  open,
+-+  title,
+-+  initialValues = {},
+-+  permissionGroups = {},
+-+  onClose,
+-+  onSubmit,
+-+  submitting = false,
+-+  errors = {},
+-+}) {
+-+  const [name, setName] = useState("");
+-+  const [description, setDescription] = useState("");
+-+  const [permissionIds, setPermissionIds] = useState([]);
+-+
+-+  useEffect(() => {
+-+    if (open) {
+-+      // eslint-disable-next-line react-hooks/set-state-in-effect
+-+      setName(initialValues.name || "");
+-+      setDescription(initialValues.description || "");
+-+      setPermissionIds((initialValues.permissions || []).map((p) => p.id));
+-+    }
+-+  }, [open, initialValues]);
+-+
+-+  if (!open) return null;
+-+
+-+  const togglePermission = (id) => {
+-+    setPermissionIds((prev) =>
+-+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
+-+    );
+-+  };
+-+
+-+  const toggleGroup = (groupPermissions, allChecked) => {
+-+    const ids = groupPermissions.map((p) => p.id);
+-+    setPermissionIds((prev) =>
+-+      allChecked ? prev.filter((id) => !ids.includes(id)) : [...new Set([...prev, ...ids])]
+-+    );
+-+  };
+-+
+-+  const handleSubmit = (e) => {
+-+    e.preventDefault();
+-+    onSubmit({ name, description, permission_ids: permissionIds });
+-+  };
+-+
+-+  return (
+-+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-8 overflow-y-auto">
+-+      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6">
+-+        <div className="flex items-center justify-between mb-4">
+-+          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+-+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">
+-+            &times;
+-+          </button>
+-+        </div>
+-+
+-+        <form onSubmit={handleSubmit}>
+-+          <div className="grid grid-cols-2 gap-4 mb-4">
+-+            <div>
+-+              <label className="block text-sm font-medium text-gray-700 mb-1">
+-+                Role Name <span className="text-red-500">*</span>
+-+              </label>
+-+              <input
+-+                type="text"
+-+                value={name}
+-+                onChange={(e) => setName(e.target.value)}
+-+                required
+-+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+-+              />
+-+              {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name[0]}</p>}
+-+            </div>
+-+            <div>
+-+              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+-+              <input
+-+                type="text"
+-+                value={description}
+-+                onChange={(e) => setDescription(e.target.value)}
+-+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+-+              />
+-+            </div>
+-+          </div>
+-+
+-+          <label className="block text-sm font-medium text-gray-700 mb-2">Permissions</label>
+-+          <div className="border border-gray-200 rounded-lg p-4 max-h-72 overflow-y-auto space-y-4">
+-+            {Object.entries(permissionGroups).map(([group, permissions]) => {
+-+              const allChecked = permissions.every((p) => permissionIds.includes(p.id));
+-+              return (
+-+                <div key={group}>
+-+                  <label className="flex items-center gap-2 mb-2 cursor-pointer select-none">
+-+                    <input
+-+                      type="checkbox"
+-+                      checked={allChecked}
+-+                      onChange={() => toggleGroup(permissions, allChecked)}
+-+                      className="w-4 h-4"
+-+                    />
+-+                    <span className="text-sm font-semibold text-gray-800">
+-+                      {GROUP_LABELS[group] || group}
+-+                    </span>
+-+                  </label>
+-+                  <div className="grid grid-cols-2 gap-2 pl-6">
+-+                    {permissions.map((permission) => (
+-+                      <label
+-+                        key={permission.id}
+-+                        className="flex items-center gap-2 cursor-pointer select-none text-sm text-gray-600"
+-+                      >
+-+                        <input
+-+                          type="checkbox"
+-+                          checked={permissionIds.includes(permission.id)}
+-+                          onChange={() => togglePermission(permission.id)}
+-+                          className="w-4 h-4"
+-+                        />
+-+                        {permission.name}
+-+                      </label>
+-+                    ))}
+-+                  </div>
+-+                </div>
+-+              );
+-+            })}
+-+          </div>
+-+
+-+          <div className="mt-6 flex justify-end gap-3">
+-+            <button
+-+              type="button"
+-+              onClick={onClose}
+-+              className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
+-+            >
+-+              Cancel
+-+            </button>
+-+            <button
+-+              type="submit"
+-+              disabled={submitting}
+-+              className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+-+            >
+-+              {submitting ? "Saving..." : "Save"}
+-+            </button>
+-+          </div>
+-+        </form>
+-+      </div>
+-+    </div>
+-+  );
+-+}
+-diff --git a/src/pages/roles/RoleList.jsx b/src/pages/roles/RoleList.jsx
+-new file mode 100644
+-index 0000000..e415a84
+---- /dev/null
+-+++ b/src/pages/roles/RoleList.jsx
+-@@ -0,0 +1,176 @@
+-+import { useEffect, useState } from "react";
+-+import { roleService } from "../../api/services";
+-+import ConfirmDialog from "../../components/common/ConfirmDialog";
+-+import RoleFormModal from "./RoleFormModal";
+-+
+-+export default function RoleList() {
+-+  const [roles, setRoles] = useState([]);
+-+  const [permissionGroups, setPermissionGroups] = useState({});
+-+  const [loading, setLoading] = useState(true);
+-+  const [error, setError] = useState("");
+-+  const [reloadToken, setReloadToken] = useState(0);
+-+
+-+  const [formOpen, setFormOpen] = useState(false);
+-+  const [editingRole, setEditingRole] = useState(null);
+-+  const [submitting, setSubmitting] = useState(false);
+-+  const [formErrors, setFormErrors] = useState({});
+-+
+-+  const [deleteTarget, setDeleteTarget] = useState(null);
+-+  const [deleting, setDeleting] = useState(false);
+-+  const [deleteError, setDeleteError] = useState("");
+-+
+-+  useEffect(() => {
+-+    // eslint-disable-next-line react-hooks/set-state-in-effect
+-+    setLoading(true);
+-+    Promise.all([roleService.list(), roleService.permissions()])
+-+      .then(([rolesRes, permissionsRes]) => {
+-+        setRoles(rolesRes.data.data);
+-+        setPermissionGroups(permissionsRes.data.data);
+-+        setLoading(false);
+-+      })
+-+      .catch((err) => {
+-+        console.error("Error fetching roles:", err);
+-+        setError(
+-+          err.response?.status === 403
+-+            ? "You don't have permission to manage roles."
+-+            : "Failed to load roles."
+-+        );
+-+        setLoading(false);
+-+      });
+-+  }, [reloadToken]);
+-+
+-+  const openAdd = () => {
+-+    setEditingRole(null);
+-+    setFormErrors({});
+-+    setFormOpen(true);
+-+  };
+-+
+-+  const openEdit = (role) => {
+-+    setEditingRole(role);
+-+    setFormErrors({});
+-+    setFormOpen(true);
+-+  };
+-+
+-+  const handleSubmit = async (values) => {
+-+    setSubmitting(true);
+-+    setFormErrors({});
+-+    try {
+-+      if (editingRole) {
+-+        await roleService.update(editingRole.id, values);
+-+      } else {
+-+        await roleService.create(values);
+-+      }
+-+      setFormOpen(false);
+-+      setReloadToken((t) => t + 1);
+-+    } catch (err) {
+-+      if (err.response?.status === 422) {
+-+        setFormErrors(err.response.data.errors || {});
+-+      } else {
+-+        alert(err.response?.data?.message || "Something went wrong. Please try again.");
+-+      }
+-+    } finally {
+-+      setSubmitting(false);
+-+    }
+-+  };
+-+
+-+  const confirmDelete = async () => {
+-+    if (!deleteTarget) return;
+-+    setDeleting(true);
+-+    setDeleteError("");
+-+    try {
+-+      await roleService.remove(deleteTarget.id);
+-+      setDeleteTarget(null);
+-+      setReloadToken((t) => t + 1);
+-+    } catch (err) {
+-+      setDeleteError(err.response?.data?.message || "Failed to delete this role.");
+-+    } finally {
+-+      setDeleting(false);
+-+    }
+-+  };
+-+
+-+  if (loading) {
+-+    return <div className="p-6 text-center text-gray-500">Loading roles...</div>;
+-+  }
+-+
+-+  if (error) {
+-+    return <div className="p-6 text-center text-red-600">{error}</div>;
+-+  }
+-+
+-+  return (
+-+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+-+      <div className="flex items-center justify-between mb-4">
+-+        <h2 className="text-lg font-semibold text-gray-900">Roles</h2>
+-+        <button
+-+          onClick={openAdd}
+-+          className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+-+        >
+-+          + Add Role
+-+        </button>
+-+      </div>
+-+
+-+      <div className="overflow-x-auto">
+-+        <table className="w-full text-sm">
+-+          <thead>
+-+            <tr className="text-left text-gray-500 border-b border-gray-200">
+-+              <th className="py-2 pr-4 font-medium">Name</th>
+-+              <th className="py-2 pr-4 font-medium">Description</th>
+-+              <th className="py-2 pr-4 font-medium">Permissions</th>
+-+              <th className="py-2 pr-4 font-medium">Users</th>
+-+              <th className="py-2 pr-4 font-medium text-right">Actions</th>
+-+            </tr>
+-+          </thead>
+-+          <tbody>
+-+            {roles.map((role) => (
+-+              <tr key={role.id} className="border-b border-gray-100 hover:bg-gray-50">
+-+                <td className="py-3 pr-4 font-medium text-gray-800">{role.name}</td>
+-+                <td className="py-3 pr-4 text-gray-600">{role.description || "—"}</td>
+-+                <td className="py-3 pr-4 text-gray-600">{role.permissions.length}</td>
+-+                <td className="py-3 pr-4 text-gray-600">{role.users_count}</td>
+-+                <td className="py-3 pr-4 text-right whitespace-nowrap">
+-+                  <button
+-+                    onClick={() => openEdit(role)}
+-+                    className="text-blue-600 hover:underline text-sm mr-3"
+-+                  >
+-+                    Edit
+-+                  </button>
+-+                  <button
+-+                    onClick={() => {
+-+                      setDeleteError("");
+-+                      setDeleteTarget(role);
+-+                    }}
+-+                    className="text-red-600 hover:underline text-sm"
+-+                  >
+-+                    Delete
+-+                  </button>
+-+                </td>
+-+              </tr>
+-+            ))}
+-+          </tbody>
+-+        </table>
+-+      </div>
+-+
+-+      <RoleFormModal
+-+        open={formOpen}
+-+        title={editingRole ? "Edit Role" : "Add Role"}
+-+        initialValues={editingRole || {}}
+-+        permissionGroups={permissionGroups}
+-+        onClose={() => setFormOpen(false)}
+-+        onSubmit={handleSubmit}
+-+        submitting={submitting}
+-+        errors={formErrors}
+-+      />
+-+
+-+      <ConfirmDialog
+-+        open={!!deleteTarget}
+-+        title="Delete Role"
+-+        message={
+-+          deleteError ||
+-+          `Delete "${deleteTarget?.name}"? This cannot be undone.`
+-+        }
+-+        onConfirm={confirmDelete}
+-+        onCancel={() => setDeleteTarget(null)}
+-+        loading={deleting}
+-+      />
+-+    </div>
+-+  );
+-+}
+-diff --git a/src/pages/settings/SettingsPage.jsx b/src/pages/settings/SettingsPage.jsx
+-new file mode 100644
+-index 0000000..92fef18
+---- /dev/null
+-+++ b/src/pages/settings/SettingsPage.jsx
+-@@ -0,0 +1,137 @@
+-+import { useEffect, useState } from "react";
+-+import { settingService } from "../../api/services";
+-+
+-+const GROUP_LABELS = {
+-+  general: "General",
+-+  inventory: "Inventory",
+-+};
+-+
+-+export default function SettingsPage() {
+-+  const [groups, setGroups] = useState({});
+-+  const [values, setValues] = useState({});
+-+  const [loading, setLoading] = useState(true);
+-+  const [saving, setSaving] = useState(false);
+-+  const [error, setError] = useState("");
+-+  const [saveMessage, setSaveMessage] = useState("");
+-+
+-+  useEffect(() => {
+-+    settingService
+-+      .list()
+-+      .then((res) => {
+-+        setGroups(res.data.data);
+-+        const initialValues = {};
+-+        Object.values(res.data.data)
+-+          .flat()
+-+          .forEach((setting) => {
+-+            initialValues[setting.key] = setting.value;
+-+          });
+-+        setValues(initialValues);
+-+        setLoading(false);
+-+      })
+-+      .catch((err) => {
+-+        console.error("Error fetching settings:", err);
+-+        setError(
+-+          err.response?.status === 403
+-+            ? "You don't have permission to view settings."
+-+            : "Failed to load settings."
+-+        );
+-+        setLoading(false);
+-+      });
+-+  }, []);
+-+
+-+  const setField = (key, value) => {
+-+    setValues((prev) => ({ ...prev, [key]: value }));
+-+    setSaveMessage("");
+-+  };
+-+
+-+  const handleSave = async (e) => {
+-+    e.preventDefault();
+-+    setSaving(true);
+-+    setSaveMessage("");
+-+    try {
+-+      await settingService.update(values);
+-+      setSaveMessage("Settings saved successfully.");
+-+    } catch (err) {
+-+      alert(
+-+        err.response?.status === 403
+-+          ? "You don't have permission to update settings."
+-+          : "Failed to save settings."
+-+      );
+-+    } finally {
+-+      setSaving(false);
+-+    }
+-+  };
+-+
+-+  if (loading) {
+-+    return <div className="p-6 text-center text-gray-500">Loading settings...</div>;
+-+  }
+-+
+-+  if (error) {
+-+    return <div className="p-6 text-center text-red-600">{error}</div>;
+-+  }
+-+
+-+  return (
+-+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 max-w-2xl">
+-+      <h2 className="text-lg font-semibold text-gray-900 mb-1">Application Settings</h2>
+-+      <p className="text-sm text-gray-500 mb-6">
+-+        These values are used across the app (e.g. on printed invoices).
+-+      </p>
+-+
+-+      {saveMessage && (
+-+        <div className="mb-4 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+-+          {saveMessage}
+-+        </div>
+-+      )}
+-+
+-+      <form onSubmit={handleSave} className="space-y-6">
+-+        {Object.entries(groups).map(([group, settings]) => (
+-+          <div key={group}>
+-+            <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
+-+              {GROUP_LABELS[group] || group}
+-+            </h3>
+-+            <div className="space-y-4">
+-+              {settings.map((setting) => (
+-+                <div key={setting.key}>
+-+                  {setting.type === "boolean" ? (
+-+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+-+                      <input
+-+                        type="checkbox"
+-+                        checked={!!values[setting.key]}
+-+                        onChange={(e) => setField(setting.key, e.target.checked)}
+-+                        className="w-4 h-4"
+-+                      />
+-+                      <span className="text-sm font-medium text-gray-700">{setting.label}</span>
+-+                    </label>
+-+                  ) : (
+-+                    <>
+-+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+-+                        {setting.label}
+-+                      </label>
+-+                      <input
+-+                        type={setting.type === "integer" ? "number" : "text"}
+-+                        value={values[setting.key] ?? ""}
+-+                        onChange={(e) => setField(setting.key, e.target.value)}
+-+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+-+                                   focus:outline-none focus:ring-2 focus:ring-blue-500"
+-+                      />
+-+                    </>
+-+                  )}
+-+                </div>
+-+              ))}
+-+            </div>
+-+          </div>
+-+        ))}
+-+
+-+        <div className="pt-2">
+-+          <button
+-+            type="submit"
+-+            disabled={saving}
+-+            className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+-+          >
+-+            {saving ? "Saving..." : "Save Settings"}
+-+          </button>
+-+        </div>
+-+      </form>
+-+    </div>
+-+  );
+-+}
+-diff --git a/src/pages/users/UserList.jsx b/src/pages/users/UserList.jsx
+-new file mode 100644
+-index 0000000..e812b86
+---- /dev/null
+-+++ b/src/pages/users/UserList.jsx
+-@@ -0,0 +1,97 @@
+-+import { useEffect, useState } from "react";
+-+import DataTable from "../../components/common/DataTable";
+-+import FormModal from "../../components/common/FormModal";
+-+import ConfirmDialog from "../../components/common/ConfirmDialog";
+-+import useResourceList from "../../components/common/useResourceList";
+-+import { userService, roleService } from "../../api/services";
+-+
+-+const columns = [
+-+  { key: "name", label: "Name" },
+-+  { key: "email", label: "Email" },
+-+  { key: "role_name", label: "Role", render: (r) => r.role_name || "— none —" },
+-+  {
+-+    key: "is_active",
+-+    label: "Status",
+-+    render: (r) => (
+-+      <span
+-+        className={`px-2 py-1 rounded-full text-xs ${
+-+          r.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+-+        }`}
+-+      >
+-+        {r.is_active ? "Active" : "Inactive"}
+-+      </span>
+-+    ),
+-+  },
+-+];
+-+
+-+export default function UserList() {
+-+  const list = useResourceList(userService);
+-+  const [roles, setRoles] = useState([]);
+-+
+-+  useEffect(() => {
+-+    roleService
+-+      .list()
+-+      .then((res) => setRoles(res.data.data))
+-+      .catch((err) => console.error("Error fetching roles:", err));
+-+  }, []);
+-+
+-+  const roleOptions = roles.map((r) => ({ value: r.id, label: r.name }));
+-+
+-+  const isEditing = !!list.editingRow;
+-+
+-+  const fields = [
+-+    { name: "name", label: "Name", type: "text", required: true },
+-+    { name: "email", label: "Email", type: "email", required: true },
+-+    ...(isEditing
+-+      ? []
+-+      : [
+-+          { name: "password", label: "Password", type: "password", required: true },
+-+          {
+-+            name: "password_confirmation",
+-+            label: "Confirm Password",
+-+            type: "password",
+-+            required: true,
+-+          },
+-+        ]),
+-+    { name: "role_id", label: "Role", type: "select", options: roleOptions },
+-+    { name: "is_active", label: "Active", type: "toggle" },
+-+  ];
+-+
+-+  return (
+-+    <>
+-+      <DataTable
+-+        title="Users"
+-+        columns={columns}
+-+        rows={list.rows}
+-+        loading={list.loading}
+-+        search={list.search}
+-+        onSearch={list.handleSearch}
+-+        meta={list.meta}
+-+        onPageChange={list.setPage}
+-+        onAdd={list.openAdd}
+-+        onEdit={list.openEdit}
+-+        onDelete={list.setDeleteTarget}
+-+      />
+-+
+-+      <FormModal
+-+        open={list.formOpen}
+-+        title={isEditing ? "Edit User" : "Add User"}
+-+        fields={fields}
+-+        initialValues={list.editingRow || {}}
+-+        onClose={list.closeForm}
+-+        onSubmit={list.submitForm}
+-+        submitting={list.submitting}
+-+        errors={list.errors}
+-+      />
+-+
+-+      <ConfirmDialog
+-+        open={!!list.deleteTarget}
+-+        title="Delete User"
+-+        message={`Delete "${list.deleteTarget?.name}"? This cannot be undone.`}
+-+        onConfirm={list.confirmDelete}
+-+        onCancel={() => list.setDeleteTarget(null)}
+-+        loading={list.deleting}
+-+      />
+-+    </>
+-+  );
+-+}
+diff --git a/src/pages/Logout.jsx b/src/pages/Logout.jsx
+index b3290a8..b46a088 100644
+--- a/src/pages/Logout.jsx
++++ b/src/pages/Logout.jsx
+@@ -13,7 +13,10 @@ function Logout() {
+                     headers: { Authorization: `Bearer ${token}` }
+                 });
+             } catch (err) {
+-                console.log("Logout error", err);
++                // Logout can fail (expired token, network drop, etc.); we still
++                // clear the local session below, so just surface it for debugging
++                // instead of leaving a bare console.log in shipped code.
++                console.error("Logout request failed:", err);
+             } finally {
+                 localStorage.removeItem("token");
+                 navigate("/login");
+-- 
+2.43.0
+
