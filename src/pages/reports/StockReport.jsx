@@ -1,14 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { reportService } from "../../api/services";
-
-const formatCurrency = (value) =>
-  Number(value || 0).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+import useCurrencySymbol from "../../hooks/useCurrencySymbol";
+import { formatCurrency } from "../../utils/currency";
 
 export default function StockReport() {
+  const currencySymbol = useCurrencySymbol();
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [rows, setRows] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -107,7 +104,7 @@ export default function StockReport() {
                 <div className="border rounded-lg p-4">
                   <p className="text-xs text-gray-500">Total Stock Value</p>
                   <p className="text-xl font-bold text-blue-700">
-                    {formatCurrency(summary.total_stock_value)}
+                    {formatCurrency(summary.total_stock_value, currencySymbol)}
                   </p>
                 </div>
                 <div className="border rounded-lg p-4">
@@ -141,7 +138,8 @@ export default function StockReport() {
                       <td className="py-2">{p.category_name || "-"}</td>
                       <td className="py-2 text-right">{p.stock_quantity}</td>
                       <td className="py-2 text-right">{p.reorder_level}</td>
-<td className="py-2 text-right pr-6">{formatCurrency(p.stock_value)}</td>                      <td className="py-2">
+                      <td className="py-2 text-right pr-6">{formatCurrency(p.stock_value, currencySymbol)}</td>
+                      <td className="py-2">
                         {p.is_low_stock ? (
                           <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-semibold">
                             Low Stock

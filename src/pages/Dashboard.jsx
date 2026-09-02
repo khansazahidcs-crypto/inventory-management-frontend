@@ -2,13 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Layout from "../components/Layout";
 import { dashboardService } from "../api/services";
-
-function formatCurrency(value) {
-  return Number(value || 0).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
+import useCurrencySymbol from "../hooks/useCurrencySymbol";
+import { formatCurrency } from "../utils/currency";
 
 function StatCard({ label, value, sub, accent = "text-white" }) {
   return (
@@ -20,7 +15,7 @@ function StatCard({ label, value, sub, accent = "text-white" }) {
   );
 }
 
-function SalesTrendChart({ trend }) {
+function SalesTrendChart({ trend, currencySymbol }) {
   const max = Math.max(1, ...trend.map((d) => d.total));
 
   return (
@@ -38,7 +33,7 @@ function SalesTrendChart({ trend }) {
                 <div
                   className="w-full bg-blue-600 rounded-t-md transition-all"
                   style={{ height: `${heightPct}%` }}
-                  title={`${day.date}: ${formatCurrency(day.total)}`}
+                  title={`${day.date}: ${formatCurrency(day.total, currencySymbol)}`}
                 />
               </div>
               <span className="text-slate-500 text-xs">{label}</span>
@@ -51,6 +46,7 @@ function SalesTrendChart({ trend }) {
 }
 
 export default function Dashboard() {
+  const currencySymbol = useCurrencySymbol();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -93,12 +89,12 @@ export default function Dashboard() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatCard
               label="Sales Revenue (All Time)"
-              value={formatCurrency(data.sales_revenue_total)}
+              value={formatCurrency(data.sales_revenue_total, currencySymbol)}
               accent="text-green-400"
             />
             <StatCard
               label="Purchases Cost (All Time)"
-              value={formatCurrency(data.purchases_cost_total)}
+              value={formatCurrency(data.purchases_cost_total, currencySymbol)}
               accent="text-blue-400"
             />
             <StatCard
@@ -117,7 +113,7 @@ export default function Dashboard() {
             <div className="md:col-span-1 bg-slate-900 border border-slate-800 rounded-lg p-5">
               <p className="text-slate-400 text-sm mb-1">Sales This Month</p>
               <p className="text-2xl font-bold text-white">
-                {formatCurrency(data.sales_this_month)}
+                {formatCurrency(data.sales_this_month, currencySymbol)}
               </p>
               {data.sales_month_over_month_change !== null && (
                 <p
@@ -129,12 +125,12 @@ export default function Dashboard() {
                 >
                   {data.sales_month_over_month_change >= 0 ? "▲" : "▼"}{" "}
                   {Math.abs(data.sales_month_over_month_change)}% vs last month (
-                  {formatCurrency(data.sales_last_month)})
+                  {formatCurrency(data.sales_last_month, currencySymbol)})
                 </p>
               )}
             </div>
             <div className="md:col-span-2">
-              <SalesTrendChart trend={data.sales_trend_last_7_days} />
+              <SalesTrendChart trend={data.sales_trend_last_7_days} currencySymbol={currencySymbol} />
             </div>
           </div>
 
@@ -159,7 +155,7 @@ export default function Dashboard() {
                         </td>
                         <td className="py-2 text-slate-500">{sale.sale_date}</td>
                         <td className="py-2 text-right text-white">
-                          {formatCurrency(sale.total_amount)}
+                          {formatCurrency(sale.total_amount, currencySymbol)}
                         </td>
                       </tr>
                     ))}
@@ -188,7 +184,7 @@ export default function Dashboard() {
                         </td>
                         <td className="py-2 text-slate-500">{purchase.purchase_date}</td>
                         <td className="py-2 text-right text-white">
-                          {formatCurrency(purchase.total_amount)}
+                          {formatCurrency(purchase.total_amount, currencySymbol)}
                         </td>
                       </tr>
                     ))}
@@ -217,7 +213,7 @@ export default function Dashboard() {
                       <td className="py-2 text-slate-200">{p.product_name}</td>
                       <td className="py-2 text-right text-slate-300">{p.quantity_sold}</td>
                       <td className="py-2 text-right text-white">
-                        {formatCurrency(p.revenue)}
+                        {formatCurrency(p.revenue, currencySymbol)}
                       </td>
                     </tr>
                   ))}

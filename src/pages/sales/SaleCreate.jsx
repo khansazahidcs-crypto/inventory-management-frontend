@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { saleService, customerService, productService } from "../../api/services";
+import useCurrencySymbol from "../../hooks/useCurrencySymbol";
+import { formatCurrency } from "../../utils/currency";
 
 const emptyItem = { product_id: "", quantity: 1, unit_price: 0 };
 
@@ -64,11 +66,7 @@ export default function SaleCreate() {
     0
   );
 
-  const formatCurrency = (value) =>
-    Number(value || 0).toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+  const currencySymbol = useCurrencySymbol();
 
   const availableStockFor = (productId) => productMap[productId]?.stock_quantity;
 
@@ -218,7 +216,7 @@ export default function SaleCreate() {
                   required
                 />
                 <div className="w-28 text-right text-sm font-medium">
-                  {formatCurrency(lineTotal)}
+                  {formatCurrency(lineTotal, currencySymbol)}
                 </div>
                 {formData.items.length > 1 && (
                   <button
@@ -251,7 +249,7 @@ export default function SaleCreate() {
           <div className="text-sm space-y-1 w-full max-w-xs">
             <div className="flex justify-between font-bold text-base border-t pt-1">
               <span>Grand Total</span>
-              <span>{formatCurrency(grandTotal)}</span>
+              <span>{formatCurrency(grandTotal, currencySymbol)}</span>
             </div>
           </div>
         </div>

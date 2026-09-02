@@ -4,9 +4,12 @@ import FormModal from "../../components/common/FormModal";
 import ConfirmDialog from "../../components/common/ConfirmDialog";
 import useResourceList from "../../components/common/useResourceList";
 import { productService, categoryService, brandService } from "../../api/services";
+import useCurrencySymbol from "../../hooks/useCurrencySymbol";
+import { formatCurrency } from "../../utils/currency";
 
 export default function ProductList() {
   const list = useResourceList(productService);
+  const currencySymbol = useCurrencySymbol();
 
   // Category & Brand dropdown options — fetched once for the Add/Edit form
   const [categoryOptions, setCategoryOptions] = useState([]);
@@ -50,7 +53,7 @@ export default function ProductList() {
     { key: "name", label: "Name" },
     { key: "sku", label: "SKU" },
     { key: "category_name", label: "Category", render: (r) => r.category_name || "—" },
-    { key: "sale_price", label: "Price", render: (r) => `$${Number(r.sale_price).toFixed(2)}` },
+    { key: "sale_price", label: "Price", render: (r) => formatCurrency(r.sale_price, currencySymbol) },
     {
       key: "stock_quantity",
       label: "Stock",

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { saleService } from "../../api/services";
+import useCurrencySymbol from "../../hooks/useCurrencySymbol";
+import { formatCurrency } from "../../utils/currency";
 
 export default function SaleInvoice() {
   const { id } = useParams();
@@ -54,11 +56,7 @@ export default function SaleInvoice() {
     }
   };
 
-  const formatCurrency = (value) =>
-    Number(value || 0).toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+  const currencySymbol = useCurrencySymbol();
 
   const statusBadge = (s) => {
     const styles = {
@@ -158,8 +156,8 @@ export default function SaleInvoice() {
               <tr key={item.id} className="border-b border-gray-200 text-sm">
                 <td className="py-2">{item.product_name || item.product?.name}</td>
                 <td className="py-2 text-right">{item.quantity}</td>
-                <td className="py-2 text-right">{formatCurrency(item.unit_price)}</td>
-                <td className="py-2 text-right">{formatCurrency(item.subtotal)}</td>
+                <td className="py-2 text-right">{formatCurrency(item.unit_price, currencySymbol)}</td>
+                <td className="py-2 text-right">{formatCurrency(item.subtotal, currencySymbol)}</td>
               </tr>
             ))}
           </tbody>
@@ -169,7 +167,7 @@ export default function SaleInvoice() {
           <div className="w-64 text-sm space-y-1">
             <div className="flex justify-between font-bold text-base border-t pt-1">
               <span>Grand Total</span>
-              <span>{formatCurrency(sale.total_amount)}</span>
+              <span>{formatCurrency(sale.total_amount, currencySymbol)}</span>
             </div>
           </div>
         </div>

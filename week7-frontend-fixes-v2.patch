@@ -1,0 +1,521 @@
+From 06adf9e85c4d257f6f045b30d2c8f394f2e7bd1f Mon Sep 17 00:00:00 2001
+From: Khansa Zahid <khansa@example.com>
+Date: Wed, 2 Sep 2026 07:25:38 +0000
+Subject: [PATCH] Week 7: Use shared currency formatter wired to Settings, fix
+ unused imports
+
+- Added src/utils/currency.js (formatCurrency) and
+  src/hooks/useCurrencySymbol.js, replacing 7 separate copy-pasted
+  formatCurrency definitions across Dashboard, SaleList, SaleCreate,
+  SaleInvoice, StockReport, SalesReport, and PurchasesReport.
+- None of those duplicated copies actually used the currency_symbol
+  application setting added in Week 6 (some had no symbol at all,
+  ProductList hardcoded "$"); every price display now reads the
+  configured symbol via useCurrencySymbol().
+- Fixed a formatting glitch in StockReport.jsx where two <td> tags had
+  been merged onto one line.
+- Removed unused 'React' import (ESLint no-unused-vars) from
+  PurchaseCreate.jsx and PurchaseList.jsx.
+- Verified with npm run build (succeeds) and eslint (no new errors
+  introduced by these changes).
+---
+ src/hooks/useCurrencySymbol.js         | 34 ++++++++++++++++++++++++++
+ src/pages/Dashboard.jsx                | 30 ++++++++++-------------
+ src/pages/products/ProductList.jsx     |  5 +++-
+ src/pages/purchases/PurchaseCreate.jsx |  2 +-
+ src/pages/purchases/PurchaseList.jsx   |  2 +-
+ src/pages/reports/PurchasesReport.jsx  | 15 +++++-------
+ src/pages/reports/SalesReport.jsx      | 15 +++++-------
+ src/pages/reports/StockReport.jsx      | 14 +++++------
+ src/pages/sales/SaleCreate.jsx         | 12 ++++-----
+ src/pages/sales/SaleInvoice.jsx        | 14 +++++------
+ src/pages/sales/SaleList.jsx           | 10 +++-----
+ src/utils/currency.js                  | 17 +++++++++++++
+ 12 files changed, 103 insertions(+), 67 deletions(-)
+ create mode 100644 src/hooks/useCurrencySymbol.js
+ create mode 100644 src/utils/currency.js
+
+diff --git a/src/hooks/useCurrencySymbol.js b/src/hooks/useCurrencySymbol.js
+new file mode 100644
+index 0000000..b85bbda
+--- /dev/null
++++ b/src/hooks/useCurrencySymbol.js
+@@ -0,0 +1,34 @@
++import { useEffect, useState } from "react";
++import { settingService } from "../api/services";
++
++// Module-level cache so we only hit /settings once per page load,
++// no matter how many components use this hook.
++let cachedSymbol = null;
++
++export default function useCurrencySymbol() {
++  const [symbol, setSymbol] = useState(cachedSymbol ?? "$");
++
++  useEffect(() => {
++    if (cachedSymbol) {
++      return;
++    }
++
++    settingService
++      .list()
++      .then(({ data }) => {
++        const allSettings = Object.values(data.data || {}).flat();
++        const currencySetting = allSettings.find((s) => s.key === "currency_symbol");
++
++        if (currencySetting?.value) {
++          cachedSymbol = currencySetting.value;
++          setSymbol(currencySetting.value);
++        }
++      })
++      .catch(() => {
++        // If settings can't be loaded (e.g. not authenticated yet),
++        // just keep the "$" default rather than breaking price displays.
++      });
++  }, []);
++
++  return symbol;
++}
+diff --git a/src/pages/Dashboard.jsx b/src/pages/Dashboard.jsx
+index 57a395f..be5edd9 100644
+--- a/src/pages/Dashboard.jsx
++++ b/src/pages/Dashboard.jsx
+@@ -2,13 +2,8 @@ import { useEffect, useState } from "react";
+ import { Link } from "react-router-dom";
+ import Layout from "../components/Layout";
+ import { dashboardService } from "../api/services";
+-
+-function formatCurrency(value) {
+-  return Number(value || 0).toLocaleString(undefined, {
+-    minimumFractionDigits: 2,
+-    maximumFractionDigits: 2,
+-  });
+-}
++import useCurrencySymbol from "../hooks/useCurrencySymbol";
++import { formatCurrency } from "../utils/currency";
+ 
+ function StatCard({ label, value, sub, accent = "text-white" }) {
+   return (
+@@ -20,7 +15,7 @@ function StatCard({ label, value, sub, accent = "text-white" }) {
+   );
+ }
+ 
+-function SalesTrendChart({ trend }) {
++function SalesTrendChart({ trend, currencySymbol }) {
+   const max = Math.max(1, ...trend.map((d) => d.total));
+ 
+   return (
+@@ -38,7 +33,7 @@ function SalesTrendChart({ trend }) {
+                 <div
+                   className="w-full bg-blue-600 rounded-t-md transition-all"
+                   style={{ height: `${heightPct}%` }}
+-                  title={`${day.date}: ${formatCurrency(day.total)}`}
++                  title={`${day.date}: ${formatCurrency(day.total, currencySymbol)}`}
+                 />
+               </div>
+               <span className="text-slate-500 text-xs">{label}</span>
+@@ -51,6 +46,7 @@ function SalesTrendChart({ trend }) {
+ }
+ 
+ export default function Dashboard() {
++  const currencySymbol = useCurrencySymbol();
+   const [data, setData] = useState(null);
+   const [loading, setLoading] = useState(true);
+   const [error, setError] = useState("");
+@@ -93,12 +89,12 @@ export default function Dashboard() {
+           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+             <StatCard
+               label="Sales Revenue (All Time)"
+-              value={formatCurrency(data.sales_revenue_total)}
++              value={formatCurrency(data.sales_revenue_total, currencySymbol)}
+               accent="text-green-400"
+             />
+             <StatCard
+               label="Purchases Cost (All Time)"
+-              value={formatCurrency(data.purchases_cost_total)}
++              value={formatCurrency(data.purchases_cost_total, currencySymbol)}
+               accent="text-blue-400"
+             />
+             <StatCard
+@@ -117,7 +113,7 @@ export default function Dashboard() {
+             <div className="md:col-span-1 bg-slate-900 border border-slate-800 rounded-lg p-5">
+               <p className="text-slate-400 text-sm mb-1">Sales This Month</p>
+               <p className="text-2xl font-bold text-white">
+-                {formatCurrency(data.sales_this_month)}
++                {formatCurrency(data.sales_this_month, currencySymbol)}
+               </p>
+               {data.sales_month_over_month_change !== null && (
+                 <p
+@@ -129,12 +125,12 @@ export default function Dashboard() {
+                 >
+                   {data.sales_month_over_month_change >= 0 ? "▲" : "▼"}{" "}
+                   {Math.abs(data.sales_month_over_month_change)}% vs last month (
+-                  {formatCurrency(data.sales_last_month)})
++                  {formatCurrency(data.sales_last_month, currencySymbol)})
+                 </p>
+               )}
+             </div>
+             <div className="md:col-span-2">
+-              <SalesTrendChart trend={data.sales_trend_last_7_days} />
++              <SalesTrendChart trend={data.sales_trend_last_7_days} currencySymbol={currencySymbol} />
+             </div>
+           </div>
+ 
+@@ -159,7 +155,7 @@ export default function Dashboard() {
+                         </td>
+                         <td className="py-2 text-slate-500">{sale.sale_date}</td>
+                         <td className="py-2 text-right text-white">
+-                          {formatCurrency(sale.total_amount)}
++                          {formatCurrency(sale.total_amount, currencySymbol)}
+                         </td>
+                       </tr>
+                     ))}
+@@ -188,7 +184,7 @@ export default function Dashboard() {
+                         </td>
+                         <td className="py-2 text-slate-500">{purchase.purchase_date}</td>
+                         <td className="py-2 text-right text-white">
+-                          {formatCurrency(purchase.total_amount)}
++                          {formatCurrency(purchase.total_amount, currencySymbol)}
+                         </td>
+                       </tr>
+                     ))}
+@@ -217,7 +213,7 @@ export default function Dashboard() {
+                       <td className="py-2 text-slate-200">{p.product_name}</td>
+                       <td className="py-2 text-right text-slate-300">{p.quantity_sold}</td>
+                       <td className="py-2 text-right text-white">
+-                        {formatCurrency(p.revenue)}
++                        {formatCurrency(p.revenue, currencySymbol)}
+                       </td>
+                     </tr>
+                   ))}
+diff --git a/src/pages/products/ProductList.jsx b/src/pages/products/ProductList.jsx
+index dff2489..7997c56 100644
+--- a/src/pages/products/ProductList.jsx
++++ b/src/pages/products/ProductList.jsx
+@@ -4,9 +4,12 @@ import FormModal from "../../components/common/FormModal";
+ import ConfirmDialog from "../../components/common/ConfirmDialog";
+ import useResourceList from "../../components/common/useResourceList";
+ import { productService, categoryService, brandService } from "../../api/services";
++import useCurrencySymbol from "../../hooks/useCurrencySymbol";
++import { formatCurrency } from "../../utils/currency";
+ 
+ export default function ProductList() {
+   const list = useResourceList(productService);
++  const currencySymbol = useCurrencySymbol();
+ 
+   // Category & Brand dropdown options — fetched once for the Add/Edit form
+   const [categoryOptions, setCategoryOptions] = useState([]);
+@@ -50,7 +53,7 @@ export default function ProductList() {
+     { key: "name", label: "Name" },
+     { key: "sku", label: "SKU" },
+     { key: "category_name", label: "Category", render: (r) => r.category_name || "—" },
+-    { key: "sale_price", label: "Price", render: (r) => `$${Number(r.sale_price).toFixed(2)}` },
++    { key: "sale_price", label: "Price", render: (r) => formatCurrency(r.sale_price, currencySymbol) },
+     {
+       key: "stock_quantity",
+       label: "Stock",
+diff --git a/src/pages/purchases/PurchaseCreate.jsx b/src/pages/purchases/PurchaseCreate.jsx
+index e5367e2..3d30df8 100644
+--- a/src/pages/purchases/PurchaseCreate.jsx
++++ b/src/pages/purchases/PurchaseCreate.jsx
+@@ -1,4 +1,4 @@
+-import React, { useState, useEffect } from "react";
++import { useState, useEffect } from "react";
+ import { purchaseService, supplierService, productService } from "../../api/services";
+ import { useNavigate } from "react-router-dom";
+ 
+diff --git a/src/pages/purchases/PurchaseList.jsx b/src/pages/purchases/PurchaseList.jsx
+index c7e4eaa..ecdd883 100644
+--- a/src/pages/purchases/PurchaseList.jsx
++++ b/src/pages/purchases/PurchaseList.jsx
+@@ -1,4 +1,4 @@
+-import React, { useEffect, useState } from "react";
++import { useEffect, useState } from "react";
+ import { purchaseService } from "../../api/services";
+ import { Link } from "react-router-dom";
+ 
+diff --git a/src/pages/reports/PurchasesReport.jsx b/src/pages/reports/PurchasesReport.jsx
+index 81c7849..770f4be 100644
+--- a/src/pages/reports/PurchasesReport.jsx
++++ b/src/pages/reports/PurchasesReport.jsx
+@@ -1,14 +1,11 @@
+ import { useEffect, useState } from "react";
+ import { Link } from "react-router-dom";
+ import { reportService } from "../../api/services";
+-
+-const formatCurrency = (value) =>
+-  Number(value || 0).toLocaleString(undefined, {
+-    minimumFractionDigits: 2,
+-    maximumFractionDigits: 2,
+-  });
++import useCurrencySymbol from "../../hooks/useCurrencySymbol";
++import { formatCurrency } from "../../utils/currency";
+ 
+ export default function PurchasesReport() {
++  const currencySymbol = useCurrencySymbol();
+   const [dateFrom, setDateFrom] = useState("");
+   const [dateTo, setDateTo] = useState("");
+   const [rows, setRows] = useState([]);
+@@ -150,13 +147,13 @@ export default function PurchasesReport() {
+                 <div className="border rounded-lg p-4">
+                   <p className="text-xs text-gray-500">Total Cost</p>
+                   <p className="text-xl font-bold text-blue-700">
+-                    {formatCurrency(summary.total_cost)}
++                    {formatCurrency(summary.total_cost, currencySymbol)}
+                   </p>
+                 </div>
+                 <div className="border rounded-lg p-4">
+                   <p className="text-xs text-gray-500">Average Order Value</p>
+                   <p className="text-xl font-bold">
+-                    {formatCurrency(summary.average_order_value)}
++                    {formatCurrency(summary.average_order_value, currencySymbol)}
+                   </p>
+                 </div>
+               </div>
+@@ -181,7 +178,7 @@ export default function PurchasesReport() {
+                       </td>
+                       <td className="py-2">{purchase.purchase_date}</td>
+                       <td className="py-2 text-right">
+-                        {formatCurrency(purchase.total_amount)}
++                        {formatCurrency(purchase.total_amount, currencySymbol)}
+                       </td>
+                     </tr>
+                   ))
+diff --git a/src/pages/reports/SalesReport.jsx b/src/pages/reports/SalesReport.jsx
+index 837b9d2..90d4489 100644
+--- a/src/pages/reports/SalesReport.jsx
++++ b/src/pages/reports/SalesReport.jsx
+@@ -1,14 +1,11 @@
+ import { useEffect, useState } from "react";
+ import { Link } from "react-router-dom";
+ import { reportService } from "../../api/services";
+-
+-const formatCurrency = (value) =>
+-  Number(value || 0).toLocaleString(undefined, {
+-    minimumFractionDigits: 2,
+-    maximumFractionDigits: 2,
+-  });
++import useCurrencySymbol from "../../hooks/useCurrencySymbol";
++import { formatCurrency } from "../../utils/currency";
+ 
+ export default function SalesReport() {
++  const currencySymbol = useCurrencySymbol();
+   const [dateFrom, setDateFrom] = useState("");
+   const [dateTo, setDateTo] = useState("");
+   const [rows, setRows] = useState([]);
+@@ -150,13 +147,13 @@ export default function SalesReport() {
+                 <div className="border rounded-lg p-4">
+                   <p className="text-xs text-gray-500">Total Revenue</p>
+                   <p className="text-xl font-bold text-green-700">
+-                    {formatCurrency(summary.total_revenue)}
++                    {formatCurrency(summary.total_revenue, currencySymbol)}
+                   </p>
+                 </div>
+                 <div className="border rounded-lg p-4">
+                   <p className="text-xs text-gray-500">Average Order Value</p>
+                   <p className="text-xl font-bold">
+-                    {formatCurrency(summary.average_order_value)}
++                    {formatCurrency(summary.average_order_value, currencySymbol)}
+                   </p>
+                 </div>
+               </div>
+@@ -180,7 +177,7 @@ export default function SalesReport() {
+                         {sale.customer_name || sale.customer?.name || "Walk-in Customer"}
+                       </td>
+                       <td className="py-2">{sale.sale_date}</td>
+-                      <td className="py-2 text-right">{formatCurrency(sale.total_amount)}</td>
++                      <td className="py-2 text-right">{formatCurrency(sale.total_amount, currencySymbol)}</td>
+                     </tr>
+                   ))
+                 ) : (
+diff --git a/src/pages/reports/StockReport.jsx b/src/pages/reports/StockReport.jsx
+index d102155..56d0323 100644
+--- a/src/pages/reports/StockReport.jsx
++++ b/src/pages/reports/StockReport.jsx
+@@ -1,14 +1,11 @@
+ import { useEffect, useState } from "react";
+ import { Link } from "react-router-dom";
+ import { reportService } from "../../api/services";
+-
+-const formatCurrency = (value) =>
+-  Number(value || 0).toLocaleString(undefined, {
+-    minimumFractionDigits: 2,
+-    maximumFractionDigits: 2,
+-  });
++import useCurrencySymbol from "../../hooks/useCurrencySymbol";
++import { formatCurrency } from "../../utils/currency";
+ 
+ export default function StockReport() {
++  const currencySymbol = useCurrencySymbol();
+   const [lowStockOnly, setLowStockOnly] = useState(false);
+   const [rows, setRows] = useState([]);
+   const [summary, setSummary] = useState(null);
+@@ -107,7 +104,7 @@ export default function StockReport() {
+                 <div className="border rounded-lg p-4">
+                   <p className="text-xs text-gray-500">Total Stock Value</p>
+                   <p className="text-xl font-bold text-blue-700">
+-                    {formatCurrency(summary.total_stock_value)}
++                    {formatCurrency(summary.total_stock_value, currencySymbol)}
+                   </p>
+                 </div>
+                 <div className="border rounded-lg p-4">
+@@ -141,7 +138,8 @@ export default function StockReport() {
+                       <td className="py-2">{p.category_name || "-"}</td>
+                       <td className="py-2 text-right">{p.stock_quantity}</td>
+                       <td className="py-2 text-right">{p.reorder_level}</td>
+-<td className="py-2 text-right pr-6">{formatCurrency(p.stock_value)}</td>                      <td className="py-2">
++                      <td className="py-2 text-right pr-6">{formatCurrency(p.stock_value, currencySymbol)}</td>
++                      <td className="py-2">
+                         {p.is_low_stock ? (
+                           <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-semibold">
+                             Low Stock
+diff --git a/src/pages/sales/SaleCreate.jsx b/src/pages/sales/SaleCreate.jsx
+index e6f1a14..d1e9490 100644
+--- a/src/pages/sales/SaleCreate.jsx
++++ b/src/pages/sales/SaleCreate.jsx
+@@ -1,6 +1,8 @@
+ import { useState, useEffect, useMemo } from "react";
+ import { useNavigate } from "react-router-dom";
+ import { saleService, customerService, productService } from "../../api/services";
++import useCurrencySymbol from "../../hooks/useCurrencySymbol";
++import { formatCurrency } from "../../utils/currency";
+ 
+ const emptyItem = { product_id: "", quantity: 1, unit_price: 0 };
+ 
+@@ -64,11 +66,7 @@ export default function SaleCreate() {
+     0
+   );
+ 
+-  const formatCurrency = (value) =>
+-    Number(value || 0).toLocaleString(undefined, {
+-      minimumFractionDigits: 2,
+-      maximumFractionDigits: 2,
+-    });
++  const currencySymbol = useCurrencySymbol();
+ 
+   const availableStockFor = (productId) => productMap[productId]?.stock_quantity;
+ 
+@@ -218,7 +216,7 @@ export default function SaleCreate() {
+                   required
+                 />
+                 <div className="w-28 text-right text-sm font-medium">
+-                  {formatCurrency(lineTotal)}
++                  {formatCurrency(lineTotal, currencySymbol)}
+                 </div>
+                 {formData.items.length > 1 && (
+                   <button
+@@ -251,7 +249,7 @@ export default function SaleCreate() {
+           <div className="text-sm space-y-1 w-full max-w-xs">
+             <div className="flex justify-between font-bold text-base border-t pt-1">
+               <span>Grand Total</span>
+-              <span>{formatCurrency(grandTotal)}</span>
++              <span>{formatCurrency(grandTotal, currencySymbol)}</span>
+             </div>
+           </div>
+         </div>
+diff --git a/src/pages/sales/SaleInvoice.jsx b/src/pages/sales/SaleInvoice.jsx
+index 9994d43..87016ea 100644
+--- a/src/pages/sales/SaleInvoice.jsx
++++ b/src/pages/sales/SaleInvoice.jsx
+@@ -1,6 +1,8 @@
+ import { useEffect, useState } from "react";
+ import { Link, useParams } from "react-router-dom";
+ import { saleService } from "../../api/services";
++import useCurrencySymbol from "../../hooks/useCurrencySymbol";
++import { formatCurrency } from "../../utils/currency";
+ 
+ export default function SaleInvoice() {
+   const { id } = useParams();
+@@ -54,11 +56,7 @@ export default function SaleInvoice() {
+     }
+   };
+ 
+-  const formatCurrency = (value) =>
+-    Number(value || 0).toLocaleString(undefined, {
+-      minimumFractionDigits: 2,
+-      maximumFractionDigits: 2,
+-    });
++  const currencySymbol = useCurrencySymbol();
+ 
+   const statusBadge = (s) => {
+     const styles = {
+@@ -158,8 +156,8 @@ export default function SaleInvoice() {
+               <tr key={item.id} className="border-b border-gray-200 text-sm">
+                 <td className="py-2">{item.product_name || item.product?.name}</td>
+                 <td className="py-2 text-right">{item.quantity}</td>
+-                <td className="py-2 text-right">{formatCurrency(item.unit_price)}</td>
+-                <td className="py-2 text-right">{formatCurrency(item.subtotal)}</td>
++                <td className="py-2 text-right">{formatCurrency(item.unit_price, currencySymbol)}</td>
++                <td className="py-2 text-right">{formatCurrency(item.subtotal, currencySymbol)}</td>
+               </tr>
+             ))}
+           </tbody>
+@@ -169,7 +167,7 @@ export default function SaleInvoice() {
+           <div className="w-64 text-sm space-y-1">
+             <div className="flex justify-between font-bold text-base border-t pt-1">
+               <span>Grand Total</span>
+-              <span>{formatCurrency(sale.total_amount)}</span>
++              <span>{formatCurrency(sale.total_amount, currencySymbol)}</span>
+             </div>
+           </div>
+         </div>
+diff --git a/src/pages/sales/SaleList.jsx b/src/pages/sales/SaleList.jsx
+index 6ea970a..3ab14a5 100644
+--- a/src/pages/sales/SaleList.jsx
++++ b/src/pages/sales/SaleList.jsx
+@@ -1,6 +1,8 @@
+ import { useEffect, useState } from "react";
+ import { Link } from "react-router-dom";
+ import { saleService } from "../../api/services";
++import useCurrencySymbol from "../../hooks/useCurrencySymbol";
++import { formatCurrency } from "../../utils/currency";
+ 
+ export default function SaleList() {
+   const [sales, setSales] = useState([]);
+@@ -60,11 +62,7 @@ export default function SaleList() {
+     }
+   };
+ 
+-  const formatCurrency = (value) =>
+-    Number(value || 0).toLocaleString(undefined, {
+-      minimumFractionDigits: 2,
+-      maximumFractionDigits: 2,
+-    });
++  const currencySymbol = useCurrencySymbol();
+ 
+   const statusBadge = (s) => {
+     const styles = {
+@@ -141,7 +139,7 @@ export default function SaleList() {
+                   </td>
+                   <td className="border border-gray-200 p-3">{s.sale_date}</td>
+                   <td className="border border-gray-200 p-3 text-right">
+-                    {formatCurrency(s.total_amount)}
++                    {formatCurrency(s.total_amount, currencySymbol)}
+                   </td>
+                   <td className="border border-gray-200 p-3 capitalize">
+                     <span className={`px-2 py-1 rounded text-xs font-semibold ${statusBadge(s.status)}`}>
+diff --git a/src/utils/currency.js b/src/utils/currency.js
+new file mode 100644
+index 0000000..f38768e
+--- /dev/null
++++ b/src/utils/currency.js
+@@ -0,0 +1,17 @@
++/**
++ * Shared currency formatter. Previously this same function was copy-pasted
++ * (with slightly different signatures) in 7 different files, and none of
++ * them actually used the `currency_symbol` application setting added in
++ * Week 6 — every price in the app was silently unformatted or hardcoded
++ * to "$". This single implementation is used everywhere instead, and
++ * accepts the symbol from useCurrencySymbol() so it stays in sync with
++ * Settings.
++ */
++export function formatCurrency(value, symbol = "$") {
++  const number = Number(value || 0).toLocaleString(undefined, {
++    minimumFractionDigits: 2,
++    maximumFractionDigits: 2,
++  });
++
++  return `${symbol}${number}`;
++}
+-- 
+2.43.0
+

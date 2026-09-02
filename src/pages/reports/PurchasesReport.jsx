@@ -1,14 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { reportService } from "../../api/services";
-
-const formatCurrency = (value) =>
-  Number(value || 0).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+import useCurrencySymbol from "../../hooks/useCurrencySymbol";
+import { formatCurrency } from "../../utils/currency";
 
 export default function PurchasesReport() {
+  const currencySymbol = useCurrencySymbol();
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [rows, setRows] = useState([]);
@@ -150,13 +147,13 @@ export default function PurchasesReport() {
                 <div className="border rounded-lg p-4">
                   <p className="text-xs text-gray-500">Total Cost</p>
                   <p className="text-xl font-bold text-blue-700">
-                    {formatCurrency(summary.total_cost)}
+                    {formatCurrency(summary.total_cost, currencySymbol)}
                   </p>
                 </div>
                 <div className="border rounded-lg p-4">
                   <p className="text-xs text-gray-500">Average Order Value</p>
                   <p className="text-xl font-bold">
-                    {formatCurrency(summary.average_order_value)}
+                    {formatCurrency(summary.average_order_value, currencySymbol)}
                   </p>
                 </div>
               </div>
@@ -181,7 +178,7 @@ export default function PurchasesReport() {
                       </td>
                       <td className="py-2">{purchase.purchase_date}</td>
                       <td className="py-2 text-right">
-                        {formatCurrency(purchase.total_amount)}
+                        {formatCurrency(purchase.total_amount, currencySymbol)}
                       </td>
                     </tr>
                   ))

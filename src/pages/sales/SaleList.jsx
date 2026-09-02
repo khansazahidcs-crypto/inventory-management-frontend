@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { saleService } from "../../api/services";
+import useCurrencySymbol from "../../hooks/useCurrencySymbol";
+import { formatCurrency } from "../../utils/currency";
 
 export default function SaleList() {
   const [sales, setSales] = useState([]);
@@ -60,11 +62,7 @@ export default function SaleList() {
     }
   };
 
-  const formatCurrency = (value) =>
-    Number(value || 0).toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+  const currencySymbol = useCurrencySymbol();
 
   const statusBadge = (s) => {
     const styles = {
@@ -141,7 +139,7 @@ export default function SaleList() {
                   </td>
                   <td className="border border-gray-200 p-3">{s.sale_date}</td>
                   <td className="border border-gray-200 p-3 text-right">
-                    {formatCurrency(s.total_amount)}
+                    {formatCurrency(s.total_amount, currencySymbol)}
                   </td>
                   <td className="border border-gray-200 p-3 capitalize">
                     <span className={`px-2 py-1 rounded text-xs font-semibold ${statusBadge(s.status)}`}>
